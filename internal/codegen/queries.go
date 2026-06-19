@@ -57,7 +57,21 @@ func (dr *Driver) prepareFunctionHeader(query *core.Query, body *builders.Indent
 		if query.Ret.IsStruct() {
 			retType = fmt.Sprintf("models.%s", query.Ret.Table.Name)
 		} else {
+			// A scalar (single-column, non-struct) return wraps an array column the
+			// same way arg-rendering (above) and pyFieldType (tables.go) do. Without
+			// this the bare inner type dropped the list, so an array-valued :one /
+			// :many rendered `str` instead of `list[str]` (arche's COALESCE(array_agg
+			// (id), ARRAY[]::varchar[]) :one column). The driver wraps `| None` (:one),
+			// list[...] / AsyncIterator[...] (:many) AROUND this string, so IsNullable
+			// stays the driver's concern here — only the list wrapper belongs here.
 			retType = query.Ret.Typ.Type
+			if query.Ret.Typ.IsList {
+				if query.Ret.Typ.ListIsBuiltin {
+					retType = fmt.Sprintf("list[%s]", retType)
+				} else {
+					retType = fmt.Sprintf("collections.abc.Sequence[%s]", retType)
+				}
+			}
 		}
 	}
 	if query.Cmd == metadata.CmdExecLastId {

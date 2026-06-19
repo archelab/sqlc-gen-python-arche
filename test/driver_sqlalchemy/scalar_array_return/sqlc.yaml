@@ -1,0 +1,24 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: 9c5216ad925cce4b57ec9c48a1bb2c9c435898e30bef98ac56d03530c5ada79e
+sql:
+  # Pins the v0.5.3 scalar-array-return fix: a single-column (non-struct) :one /
+  # :many whose column is an array renders list[T] (emit_list_arrays:true) in the
+  # return annotation, not the bare inner type. Uses arche's exact option set.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.scalar_array_return.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          singularize_result_columns: false
+          emit_list_arrays: true
