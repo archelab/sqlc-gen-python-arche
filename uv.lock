@@ -696,11 +696,11 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-coverage = [{ name = "coverage", extras = ["toml"], specifier = ">=7.8.0" }]
+coverage = [{ name = "coverage", extras = ["toml"], specifier = ">=7.14.1" }]
 dev = [{ name = "nox", specifier = ">=2025.5.1" }]
 dev-complete = [
     { name = "asyncpg-stubs", specifier = ">=0.30.1" },
-    { name = "coverage", extras = ["toml"], specifier = ">=7.8.0" },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.14.1" },
     { name = "nox", specifier = ">=2025.5.1" },
     { name = "pyright", specifier = ">=1.1.400" },
     { name = "pytest", specifier = ">=8.3.5" },
@@ -711,7 +711,7 @@ dev-complete = [
 ]
 pyright = [
     { name = "asyncpg-stubs", specifier = ">=0.30.1" },
-    { name = "coverage", extras = ["toml"], specifier = ">=7.8.0" },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.14.1" },
     { name = "pyright", specifier = ">=1.1.400" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
@@ -719,7 +719,7 @@ pyright = [
     { name = "pytest-dependency", specifier = ">=0.6.0" },
 ]
 pytest = [
-    { name = "coverage", extras = ["toml"], specifier = ">=7.8.0" },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.14.1" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
