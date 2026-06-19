@@ -408,11 +408,17 @@ func (gen *PythonGenerator) columnsToStruct(name string, columns []goColumn, use
 		// core.NameDisambiguator, shared with the flat multi-param arg loop).
 		disambiguator.Next(baseFieldName, i, c.id, c.IsNamedParam, useID)
 
-		f := core.Column{
-			Name: inflection.Singular(inflection.SingularParams{
-				Name:       core.ColumnName(c.Column, i),
+		// Result-column field name: singularized (historical default) or
+		// verbatim when singularize_result_columns:false (drop-in-from-upstream).
+		fieldName := core.ColumnName(c.Column, i)
+		if gen.config.SingularizeResultColumns == nil || *gen.config.SingularizeResultColumns {
+			fieldName = inflection.Singular(inflection.SingularParams{
+				Name:       fieldName,
 				Exclusions: gen.config.InflectionExcludeTableNames,
-			}),
+			})
+		}
+		f := core.Column{
+			Name:   fieldName,
 			DBName: colName,
 			Number: int32(c.id),
 			Column: c.Column,

@@ -1,0 +1,27 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: dfae30c300e60390c91c4788920c00158be5ec45f4d6c13c9bf73d1ba9e432df
+sql:
+  # Proves the singularize_result_columns:false knob: the plural result-column
+  # aliases (total_creditos / total_documentos / valor_servicos / codigo_barras)
+  # emit VERBATIM, not singularized. This is the drop-in-from-upstream behaviour
+  # arche relies on so its ~470 codegen consumers compile unchanged after the
+  # swap off upstream sqlc-gen-python. The default (true) is golden-pinned by
+  # every other case (which omit the knob); base-table model fields are always
+  # verbatim regardless of the knob.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.verbatim_result_columns.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          singularize_result_columns: false

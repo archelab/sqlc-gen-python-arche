@@ -7,7 +7,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/plugin"
 )
 
-const PluginVersion = "v0.5.0"
+const PluginVersion = "v0.5.1"
 
 type Config struct {
 	Package                     string                `json:"package" yaml:"package"`
@@ -18,6 +18,14 @@ type Config struct {
 	EmitExactTableNames         bool                  `json:"emit_exact_table_names" yaml:"emit_exact_table_names"`
 	EmitClasses                 bool                  `json:"emit_classes" yaml:"emit_classes"`
 	InflectionExcludeTableNames []string              `json:"inflection_exclude_table_names,omitempty" yaml:"inflection_exclude_table_names,omitempty"`
+	// SingularizeResultColumns controls whether a query RESULT column's field
+	// name is singularized (the historical better-python behaviour) or emitted
+	// verbatim. Defaults to true (singularize) when omitted, so existing goldens
+	// are unchanged. Set false to keep result-column field names byte-identical to
+	// the SQL alias — required for a drop-in swap from upstream sqlc-gen-python,
+	// which never singularizes result columns. Base-TABLE model field names are
+	// always verbatim (buildTable) and are unaffected by this knob.
+	SingularizeResultColumns    *bool                 `json:"singularize_result_columns,omitempty" yaml:"singularize_result_columns,omitempty"`
 	OmitUnusedModels            bool                  `json:"omit_unused_models" yaml:"omit_unused_models"`
 	OmitTypecheckingBlock       bool                  `json:"omit_typechecking_block" yaml:"omit_typechecking_block"`
 	QueryParameterLimit         *int32                `json:"query_parameter_limit,omitempty" yaml:"query_parameter_limit"`
@@ -126,6 +134,13 @@ func ParseConfig(req *plugin.GenerateRequest) (*Config, error) {
 	if config.EmitDocstringsSQL == nil {
 		config.EmitDocstringsSQL = new(bool)
 		*config.EmitDocstringsSQL = true
+	}
+	if config.SingularizeResultColumns == nil {
+		// Default true preserves the historical result-column singularization
+		// (and every committed golden). Only an explicit `false` opts into the
+		// verbatim, drop-in-from-upstream behaviour.
+		config.SingularizeResultColumns = new(bool)
+		*config.SingularizeResultColumns = true
 	}
 
 	config.InitialismsMap = map[string]struct{}{}
