@@ -160,7 +160,7 @@ jobs:
       # gitignored, never committed), so Go is required. Pinned to the go.mod
       # toolchain; GOTOOLCHAIN in build.sh makes the wasm sha reproducible.
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -186,7 +186,7 @@ jobs:
 
       # nox builds the wasm fresh from source (gitignored) → Go required.
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -212,7 +212,7 @@ jobs:
 
       # nox builds the wasm fresh from source (gitignored) → Go required.
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -241,7 +241,7 @@ jobs:
 
       # nox builds the wasm fresh from source (gitignored) → Go required.
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -271,7 +271,7 @@ jobs:
 
       # nox builds the wasm fresh from source (gitignored) → Go required.
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -296,7 +296,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -314,7 +314,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
@@ -349,7 +349,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24.1'
 
