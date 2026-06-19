@@ -1,0 +1,27 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves the C-#12 native SQLAlchemy :many SELECT async-generator shape and
+  # the F3 guards: the :many SELECT emits
+  # `async def f(...) -> collections.abc.AsyncIterator[Row]:` with
+  # `result = await self._conn.stream(...)` + `async for row in result: yield
+  # Row(...)`, byte-modelled on the reference list_expired_file_attachments query
+  # (file_attachment.py). It must emit NO `class QueryResults`, NO
+  # `QueryResultsArgsType` typealias, and no stray `""` in __all__ (the F3
+  # driver-agnostic-injection guards), unlike the asyncpg :many path.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.many_stream.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

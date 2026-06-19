@@ -1,0 +1,33 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves the pydantic model emitter (C-#7): pins the `pydantic.BaseModel`
+  # models.py bytes — table comment -> class docstring, column comment ->
+  # `# ...` field comment, nullable -> `T | None`, no-comment table -> no
+  # docstring, ZERO Field(alias). jsonb maps to `str` (the CURRENT default — the
+  # golden pins `metadata: str | None`); jsonb->Any is the DEFERRED P-09 work
+  # (issue #19), NOT asserted-as-proven here.
+  #
+  # Driver is sqlalchemy — the real intended pairing. pydantic emits NO
+  # `from __future__ import annotations` (it resolves field annotations at
+  # RUNTIME to build each validator), which is fundamentally incompatible with
+  # the asyncpg driver, whose `ConnectionLike: typing.TypeAlias` lives in a
+  # `typing.TYPE_CHECKING` block and relies on future-annotations to defer it.
+  # The pydantic model SHAPE is driver-independent, so sqlalchemy proves it just
+  # as well without that contradiction.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.pydantic_models.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

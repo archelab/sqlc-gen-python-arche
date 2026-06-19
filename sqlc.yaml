@@ -1,0 +1,35 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  - schema: test/schema.sql
+    queries: test/queries.sql
+    engine: postgresql
+    codegen:
+      - out: test
+        plugin: python
+        options:
+          package: test
+          sql_driver: asyncpg
+          model_type: msgspec
+          emit_classes: true
+          omit_unused_models: false
+          emit_init_file: false
+          query_parameter_limit: 0
+          debug: true
+          docstrings: numpy
+          overrides:
+            - db_type: serial
+              py_type:
+                import: test
+                package: test_type
+                type: test_type.Test
+            - column: test_inner_postgres_types.bool_test
+              py_type:
+                import: test
+                package: test_type
+                type: test_type.Test
+

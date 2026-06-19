@@ -1,0 +1,37 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves the NullabilityOverride LOOSEN mechanism (ruling F2, P-04) on the
+  # three result shapes whose loosen target is uniquely named: a correlated
+  # SUM/COUNT aggregate (Table==nil), a get_customer_primary_kind FuncCall
+  # (Table==nil), and a LEFT JOIN LATERAL ColumnRef. All four target columns
+  # are loosened by a BARE-NAME override (no query scope) because no base-table
+  # model carries the same field name — the over-match audit's "uniquely named"
+  # safe case. The scope_kind/scope_owner_kind collision (loosen target that
+  # ALSO names a base view-model column) is documented separately as the
+  # bare-name-inadequate case.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.nullability_loosen.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          nullability_overrides:
+            - column: secondary_total_ledger_amount
+              nullable: true
+            - column: secondary_ledger_count
+              nullable: true
+            - column: owner_kind
+              nullable: true
+            - column: legal_form
+              nullable: true

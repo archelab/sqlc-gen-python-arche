@@ -1,0 +1,102 @@
+# mise (https://mise.jdx.dev) is the toolchain manager and task runner for this
+# repo. It pins the SYSTEM tools and wraps the existing Go + nox workflow as
+# tasks — it does NOT replace either: `nox` (driven via `uv`) is still the
+# pipeline engine, and `scripts/build/build.sh` still builds the wasm.
+#
+#   mise install          # provision the pinned toolchain (go, uv, sqlc, changie)
+#   mise tasks            # list every task
+#   mise run build        # build the wasm plugin + re-pin sqlc.yaml shas
+#   mise run check        # the full gate (mirrors CI); needs `mise run db:up`
+#
+# Python dependencies are owned by `uv` (pyproject.toml + uv.lock), not by mise:
+# each nox session provisions its own uv venv from the frozen lock. A running
+# Docker daemon is an external prerequisite for the live-Postgres tasks (`test`,
+# `check`); see `db:up`.
+
+min_version = "2025.1.0"
+
+[tools]
+# go MUST equal the `go` line in go.mod. The wasm sha256 that every committed
+# sqlc.yaml pins is reproducible only under go1.24.1 — scripts/build/build.sh
+# also exports GOTOOLCHAIN=go1.24.1, so pinning it here makes that a no-op
+# (the host go IS 1.24.1) instead of an on-demand toolchain download.
+go = "1.24.1"
+# uv owns the Python side (venvs + the frozen lock). Pinned to a recent line;
+# uv.lock is the real reproducibility anchor, not the uv binary version.
+uv = "0.11"
+# sqlc drives the golden generate/diff sessions. Pinned EXACT: the committed
+# goldens carry `# sqlc v1.31.1` headers, so a different sqlc would fail the diff.
+sqlc = "1.31.1"
+# changie manages changelog fragments (see CONTRIBUTING.md). Dev-only.
+changie = "latest"
+
+[env]
+# Live-Postgres URI shared by `db:up` and the `pytest` nox session (its default).
+# Keep the credentials here in lockstep with the `db:up` task.
+POSTGRES_URI = "postgresql://root:187187@localhost:5432/root"
+
+# ── build ──────────────────────────────────────────────────────────────────
+
+[tasks.build]
+description = "Build the wasm plugin from Go source and re-pin every sqlc.yaml sha256"
+run = "bash scripts/build/build.sh"
+
+[tasks.reserved]
+description = "Regenerate internal/core/reserved.go from the Python keyword list"
+run = "uv run --frozen python scripts/py/reserved_keywoards.py"
+
+# ── generated-code gates (nox) ───────────────────────────────────────────────
+
+[tasks.golden]
+description = "Assert the committed goldens are byte-current (sqlc diff + pyright + ruff)"
+run = "uv run --frozen --group dev nox -s asyncpg_check aiosqlite_check sqlite3_check sqlalchemy_check deletion_proof"
+
+[tasks.gen]
+description = "Regenerate all golden trees in place (after an intentional generator change)"
+run = "uv run --frozen --group dev nox -s asyncpg aiosqlite sqlite3 sqlalchemy deletion_proof_generate"
+
+[tasks.test]
+description = "Live-Postgres round-trip tests (Tier-2). Needs `mise run db:up`."
+run = "uv run --frozen --group dev nox -s pytest"
+
+[tasks.lint]
+description = "Type-check (pyright) and lint (ruff) the harness + generated trees"
+run = "uv run --frozen --group dev nox -s pyright ruff_check"
+
+[tasks.format]
+description = "Format and import-sort with ruff"
+run = "uv run --frozen --group dev nox -s ruff_format"
+
+# ── Go ───────────────────────────────────────────────────────────────────────
+
+[tasks.go-vet]
+description = "go vet the generator"
+run = "go vet ./..."
+
+[tasks.go-test]
+description = "Run the Go unit + architecture tests (generator internals)"
+run = "go test ./..."
+
+[tasks.wasm-pins]
+description = "Prove the committed sqlc.yaml sha pins match a fresh source build (CI: wasm-pins)"
+run = [
+    "bash scripts/build/build.sh",
+    "git diff --exit-code -- '**/sqlc.yaml' sqlc.yaml",
+]
+
+# ── umbrella ─────────────────────────────────────────────────────────────────
+
+[tasks.check]
+description = "Full gate, mirrors CI: go vet/test + wasm-pins + nox golden/type/lint/live-PG. Needs db:up."
+depends = ["go-vet", "go-test", "wasm-pins"]
+run = "uv run --frozen --group dev nox -s asyncpg_check aiosqlite_check sqlite3_check sqlalchemy_check deletion_proof pyright ruff_check pytest"
+
+# ── local Postgres ───────────────────────────────────────────────────────────
+
+[tasks."db:up"]
+description = "Start a local Postgres for the live tests (credentials match $POSTGRES_URI)"
+run = "docker run --name sqlc-gen-python-arche-postgres -e POSTGRES_USER=root -e POSTGRES_PASSWORD=187187 -e POSTGRES_DB=root -p 5432:5432 -d postgres"
+
+[tasks."db:down"]
+description = "Stop and remove the local Postgres test container"
+run = "docker rm -f sqlc-gen-python-arche-postgres"

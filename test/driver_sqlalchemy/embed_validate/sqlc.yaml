@@ -1,0 +1,29 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # A sqlc.embed of `author` whose jsonb `settings` column is overridden to a
+  # typed pydantic shape with validate: true — the validated column lives INSIDE
+  # the embed, so the adapter-declaration set must recurse into embed fields.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.embed_validate.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          overrides:
+            - column: author.settings
+              py_type:
+                import: test.driver_sqlalchemy.embed_validate.shapes
+                package: AuthorSettings
+                type: AuthorSettings
+              validate: true

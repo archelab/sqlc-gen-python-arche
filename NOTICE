@@ -1,0 +1,31 @@
+sqlc-gen-python-arche
+=====================
+
+This project is a fork of sqlc-gen-better-python by Rayakame:
+
+    https://github.com/rayakame/sqlc-gen-better-python
+
+The upstream project is licensed under the MIT License (see LICENSE), and its
+copyright is retained. This fork adds a SQLAlchemy-async + Pydantic code path
+and nullability-inference hardening on top of that base; the bulk of the
+generator — model and query emitters, driver abstraction, inflection, and type
+machinery — is the work of the upstream authors.
+
+The upstream project, and this fork through it, draws on the wider sqlc
+ecosystem:
+
+  - sqlc-dev/sqlc            https://github.com/sqlc-dev/sqlc
+      The SQL compiler and the plugin SDK (plugin-sdk-go) this plugin targets.
+  - sqlc-dev/sqlc-gen-python https://github.com/sqlc-dev/sqlc-gen-python
+  - sqlc-dev/sqlc-gen-kotlin https://github.com/sqlc-dev/sqlc-gen-kotlin
+      Prior-art code generators that informed the emitter design.
+  - sqlc-dev/sqlc-gen-go     https://github.com/sqlc-dev/sqlc-gen-go
+  - tandemdude/sqlc-gen-java https://github.com/tandemdude/sqlc-gen-java
+      References for building a sqlc WASM plugin.
+
+Third-party Go dependencies (see go.mod / go.sum for exact versions):
+
+  - github.com/jinzhu/inflection         (MIT)   singularization
+  - github.com/sqlc-dev/plugin-sdk-go    (MIT)   sqlc plugin SDK
+
+All trademarks and project names are the property of their respective owners.
