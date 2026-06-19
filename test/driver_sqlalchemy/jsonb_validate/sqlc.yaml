@@ -1,0 +1,43 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Two jsonb columns overridden to typed pydantic shapes with `validate: true`,
+  # so the generated read path emits
+  # `pydantic.TypeAdapter(<type>).validate_python(row[0])` (fail-loud) instead of
+  # returning the decoded value unwrapped. `config` is a nested model; `payload`
+  # is a discriminated union A | B | C[D] (incl. a generic member).
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.jsonb_validate.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          overrides:
+            - column: widget.config
+              py_type:
+                import: test.driver_sqlalchemy.jsonb_validate.shapes
+                package: WidgetConfig
+                type: WidgetConfig
+              validate: true
+            - column: widget.payload
+              py_type:
+                import: test.driver_sqlalchemy.jsonb_validate.shapes
+                package: WidgetPayload
+                type: WidgetPayload
+              validate: true
+            - column: widget.extra
+              py_type:
+                import: test.driver_sqlalchemy.jsonb_validate.shapes
+                package: WidgetConfig
+                type: WidgetConfig
+              validate: true

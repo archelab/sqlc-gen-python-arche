@@ -1,0 +1,70 @@
+package types
+
+import (
+	"fmt"
+	"github.com/archelab/sqlc-gen-python-arche/internal/core"
+	"github.com/archelab/sqlc-gen-python-arche/internal/log"
+
+	"github.com/sqlc-dev/plugin-sdk-go/plugin"
+	"github.com/sqlc-dev/plugin-sdk-go/sdk"
+)
+
+func PostgresTypeToPython(req *plugin.GenerateRequest, col *plugin.Column, conf *core.Config) string {
+	columnType := sdk.DataType(col.Type)
+
+	switch columnType {
+	case "serial", "serial4", "pg_catalog.serial4", "bigserial", "serial8", "pg_catalog.serial8", "smallserial", "serial2", "pg_catalog.serial2", "integer", "int", "int4", "pg_catalog.int4", "bigint", "int8", "pg_catalog.int8", "smallint", "int2", "pg_catalog.int2":
+		return "int"
+	case "float", "double precision", "float8", "pg_catalog.float8", "real", "float4", "pg_catalog.float4":
+		return "float"
+	case "numeric", "pg_catalog.numeric":
+		return "decimal.Decimal"
+	case "money":
+		return "str"
+	case "boolean", "bool", "pg_catalog.bool":
+		return "bool"
+	case "pg_catalog.json", "json", "jsonb":
+		// json/jsonb columns default to typing.Any (matching upstream
+		// sqlc-gen-python's Optional[Any]); a per-column override
+		// (db_type: jsonb / column: ...) can still target a typed pydantic model
+		// where the JSON shape is known.
+		return "typing.Any"
+	case "bytea", "blob", "pg_catalog.bytea":
+		return "bytes"
+	case "date":
+		return "datetime.date"
+	case "pg_catalog.time", "pg_catalog.timetz", "timetz":
+		return "datetime.time"
+	case "pg_catalog.timestamp", "pg_catalog.timestamptz", "timestamptz":
+		return "datetime.datetime"
+	case "interval", "pg_catalog.interval":
+		return "datetime.timedelta"
+	case "text", "pg_catalog.varchar", "bpchar", "pg_catalog.bpchar", "char", "string", "citext":
+		return "str"
+	case "uuid":
+		return "uuid.UUID"
+	case "inet", "cidr", "macaddr", "macaddr8":
+		// psycopg2 does have support for ipaddress objects, but it is not enabled by default
+		//
+		// https://www.psycopg.org/docs/extras.html#adapt-network
+		return "str"
+	case "ltree", "lquery", "ltxtquery":
+		return "str"
+	default:
+		for _, schema := range req.Catalog.Schemas {
+			if schema.Name == "pg_catalog" || schema.Name == "information_schema" {
+				continue
+			}
+			for _, enum := range schema.Enums {
+				if columnType == enum.Name {
+					if schema.Name == req.Catalog.DefaultSchema {
+						return "models." + core.ModelName(enum.Name, "", conf)
+					}
+					return "models." + core.ModelName(enum.Name, schema.Name, conf)
+				}
+			}
+		}
+		log.GlobalLogger.Log(fmt.Sprintf("unknown PostgreSQL type: %s", columnType))
+		return "typing.Any"
+	}
+}

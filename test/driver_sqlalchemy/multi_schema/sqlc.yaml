@@ -1,0 +1,25 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # P-21 cross-package multi-file schema list + multi-dir query glob: `schema` is
+  # a LIST of two files (mirrors app_billing listing app_db migrations by
+  # path), and `queries` is a directory glob. The combined catalog must resolve a
+  # JOIN across both schema files.
+  - schema:
+      - schema/0001_customer.sql
+      - schema/0002_order.sql
+    queries: query
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.multi_schema.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

@@ -1,0 +1,30 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # P-09 jsonb policy: the un-overridden `payload` jsonb column defaults to
+  # typing.Any (matching the reference models.py Optional[Any]); the `config` jsonb
+  # column is mapped to a typed pydantic model (shapes.WidgetConfig) by a
+  # per-column override, proving a known JSON shape can be typed without
+  # changing the default.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.jsonb_typed.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          overrides:
+            - column: widget.config
+              py_type:
+                import: test.driver_sqlalchemy.jsonb_typed.shapes
+                package: WidgetConfig
+                type: WidgetConfig

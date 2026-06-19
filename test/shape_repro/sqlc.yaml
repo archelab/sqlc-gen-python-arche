@@ -1,0 +1,57 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://./sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # GOAL §6 STEP-B fork-side deletion proof. This ONE consolidated config
+  # consolidates every risky shape two external post-processors patch. Generated
+  # with ZERO post-processing; the committed gen/ tree is the migration baseline
+  # and `sqlc diff` (the deletion_proof nox session) must stay byte-empty.
+  #
+  # config knobs: file_header "# pyright: basic" on every emitted file +
+  # emit_init_file:true (the F5 reconciliation), so __init__.py line 1 is the
+  # header. This replaces both the per-file prepend loop and the
+  # `printf '# pyright: basic' > __init__.py` in an external analytics post-processor.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.shape_repro.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: true
+          file_header: "# pyright: basic"
+          query_parameter_limit: 1
+          # kind/kinds collision -> keep order_kinds distinct (OrderKinds),
+          # so the catalog model stays OrderKind. Replaces the an external rename pass.
+          inflection_exclude_table_names:
+            - order_kinds
+          nullability_overrides:
+            # LATERAL / aggregate / get_customer_primary_kind LOOSEN (bare-name:
+            # the targets are uniquely named, no base-table model collides).
+            - column: secondary_total_ledger_amount
+              nullable: true
+            - column: secondary_ledger_count
+              nullable: true
+            - column: owner_kind
+              nullable: true
+            - column: legal_form
+              nullable: true
+            # COALESCE TIGHTEN scoped to the Charge row via table-qualified
+            # override. COALESCE over TWO nullable columns is inferred Optional by
+            # native sqlc, so these overrides are LOAD-BEARING: the COALESCE column
+            # retains its ledger_charge Table and the override flips it non-Optional
+            # (strip either line and LockChargeRowsRow regresses to Optional,
+            # perturbing the deletion-proof diff). The CASE-WHEN sibling has
+            # Table==nil, is not reached by the table-qualified override, and stays
+            # Optional. Mirrors the reference ledger_source COALESCE tighten.
+            - column: ledger_charge.charge_penalty_value
+              nullable: false
+            - column: ledger_charge.charge_interest_value
+              nullable: false

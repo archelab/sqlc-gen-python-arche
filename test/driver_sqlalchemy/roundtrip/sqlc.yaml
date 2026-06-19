@@ -1,0 +1,37 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Tier-2 live-Postgres round-trip case (GOAL §2/§3 PROOFS). The generated
+  # AsyncQuerier is executed against a real sqlalchemy.ext.asyncio.AsyncConnection
+  # in test_roundtrip.py: :one struct + scalar + None path, :many SELECT
+  # struct/scalar via conn.stream() (AsyncIterator), :exec, :execrows
+  # (result.rowcount), the P-03 :many-over-DML via result.all() (list[T]), the
+  # word-boundary colon escape (an unescaped ` :b` SQLAlchemy reads as a bind, so
+  # a wrong escape passes pyright but raises at runtime), and a model carrying
+  # datetime + decimal + list columns constructed from the
+  # test frame (the CRITICAL forward-ref bug would crash here).
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.roundtrip.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          overrides:
+            - column: widget.meta
+              py_type:
+                import: test.driver_sqlalchemy.roundtrip.shapes
+                package: WidgetMeta
+                type: WidgetMeta
+          nullability_overrides:
+            - column: charge.charge_penalty_value
+              nullable: false

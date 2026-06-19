@@ -1,0 +1,23 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # P-17: multi-line SQL (and an embedded multi-line block comment) is emitted
+  # verbatim into the `typing.Final[str]` query constant without breaking the
+  # triple-quoted string; the F1 colon-escape + `$N`->`:pN` rewrite apply across
+  # every line.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.multiline_sql.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

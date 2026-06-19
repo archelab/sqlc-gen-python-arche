@@ -1,0 +1,25 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # REVIEW-CORRECTIONS minor-2: the SQLAlchemy AsyncQuerier class body must be
+  # docstring-free even when `docstrings` IS set to a convention. This case sets
+  # `docstrings: google`; the golden proves the class header, __init__, and
+  # `self._conn = conn` carry NO class/init/conn docstring (the function-level
+  # docstrings the verb method itself emits are a separate, knob-driven concern).
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.class_docstring_suppression.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          docstrings: google
