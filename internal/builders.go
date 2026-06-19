@@ -114,24 +114,26 @@ func (gen *PythonGenerator) makePythonTypeRaw(col *plugin.Column) core.PyType {
 		dbTypeMatch := override.DBType != "" && override.DBType == columnType
 		if columnMatch || dbTypeMatch {
 			return core.PyType{
-				SqlType:     columnType,
-				Type:        override.PyTypeName,
-				DefaultType: strType,
-				IsNullable:  !col.NotNull,
-				IsList:      col.GetIsArray() || col.GetIsSqlcSlice(),
-				IsEnum:      false,
-				IsOverride:  true,
-				Override:    &override,
+				SqlType:       columnType,
+				Type:          override.PyTypeName,
+				DefaultType:   strType,
+				IsNullable:    !col.NotNull,
+				IsList:        col.GetIsArray() || col.GetIsSqlcSlice(),
+				IsEnum:        false,
+				IsOverride:    true,
+				Override:      &override,
+				ListIsBuiltin: gen.config.EmitListArrays != nil && *gen.config.EmitListArrays,
 			}
 		}
 	}
 	return core.PyType{
-		SqlType:     columnType,
-		Type:        strType,
-		DefaultType: strType,
-		IsNullable:  !col.NotNull,
-		IsList:      col.GetIsArray() || col.GetIsSqlcSlice(),
-		IsEnum:      false,
+		SqlType:       columnType,
+		Type:          strType,
+		DefaultType:   strType,
+		IsNullable:    !col.NotNull,
+		IsList:        col.GetIsArray() || col.GetIsSqlcSlice(),
+		IsEnum:        false,
+		ListIsBuiltin: gen.config.EmitListArrays != nil && *gen.config.EmitListArrays,
 	}
 }
 
@@ -406,7 +408,14 @@ func (gen *PythonGenerator) columnsToStruct(name string, columns []goColumn, use
 		// Track suffixes by the ID of the column, so that columns referring to
 		// the same numbered parameter can be reused (single-sourced in
 		// core.NameDisambiguator, shared with the flat multi-param arg loop).
-		disambiguator.Next(baseFieldName, i, c.id, c.IsNamedParam, useID)
+		disambiguatedBase := disambiguator.Next(baseFieldName, i, c.id, c.IsNamedParam, useID)
+		// The de-collision suffix ("" or "_2", "_3", …) the disambiguator assigned
+		// when two result columns share a base name. It MUST be applied to the
+		// emitted field name; otherwise two `entidade_id` columns both emit
+		// `entidade_id`, producing a duplicate keyword argument at the row
+		// construction site (invalid Python). Upstream emits `entidade_id` /
+		// `entidade_id_2` — this restores that.
+		decollisionSuffix := strings.TrimPrefix(disambiguatedBase, baseFieldName)
 
 		// Result-column field name: singularized (historical default) or
 		// verbatim when singularize_result_columns:false (drop-in-from-upstream).
@@ -417,6 +426,7 @@ func (gen *PythonGenerator) columnsToStruct(name string, columns []goColumn, use
 				Exclusions: gen.config.InflectionExcludeTableNames,
 			})
 		}
+		fieldName += decollisionSuffix
 		f := core.Column{
 			Name:   fieldName,
 			DBName: colName,

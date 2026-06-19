@@ -79,7 +79,11 @@ func pyFieldType(col core.Column, stripModelsPrefix bool) string {
 		type_ = strings.TrimPrefix(type_, "models.")
 	}
 	if col.Type.IsList {
-		type_ = "collections.abc.Sequence[" + type_ + "]"
+		if col.Type.ListIsBuiltin {
+			type_ = "list[" + type_ + "]"
+		} else {
+			type_ = "collections.abc.Sequence[" + type_ + "]"
+		}
 	}
 	if col.Type.IsNullable {
 		type_ = type_ + " | None"

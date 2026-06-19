@@ -195,6 +195,24 @@ func containsDMLKeyword(upper string) bool {
 	isWord := func(b byte) bool {
 		return b == '_' || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 	}
+	// `FOR UPDATE` / `FOR NO KEY UPDATE` is a row-locking clause, NOT a
+	// data-modifying statement. A standalone UPDATE that is the locking keyword
+	// must not flag a read-only `:many` as DML — doing so materializes it to
+	// list[T] instead of streaming AsyncIterator[T], a consumer-visible interface
+	// change. A real writable CTE (`name AS (UPDATE …)`) has its UPDATE preceded
+	// by `(`, not `FOR`, so this exclusion never hides genuine data modification.
+	isLockingUpdate := func(at int) bool {
+		pre := strings.TrimRight(upper[:at], " \t\r\n")
+		for _, suf := range []string{"FOR", "FOR NO KEY"} {
+			if strings.HasSuffix(pre, suf) {
+				before := len(pre) - len(suf)
+				if before == 0 || !isWord(pre[before-1]) {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	for _, kw := range []string{"INSERT", "UPDATE", "DELETE"} {
 		from := 0
 		for {
@@ -206,7 +224,7 @@ func containsDMLKeyword(upper string) bool {
 			beforeOK := at == 0 || !isWord(upper[at-1])
 			end := at + len(kw)
 			afterOK := end == len(upper) || !isWord(upper[end])
-			if beforeOK && afterOK {
+			if beforeOK && afterOK && !(kw == "UPDATE" && isLockingUpdate(at)) {
 				return true
 			}
 			from = at + 1

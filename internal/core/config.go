@@ -7,7 +7,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/plugin"
 )
 
-const PluginVersion = "v0.5.1"
+const PluginVersion = "v0.5.2"
 
 type Config struct {
 	Package                     string                `json:"package" yaml:"package"`
@@ -26,6 +26,13 @@ type Config struct {
 	// which never singularizes result columns. Base-TABLE model field names are
 	// always verbatim (buildTable) and are unaffected by this knob.
 	SingularizeResultColumns    *bool                 `json:"singularize_result_columns,omitempty" yaml:"singularize_result_columns,omitempty"`
+	// EmitListArrays controls whether an array column renders as the builtin
+	// `list[T]` (drop-in-from-upstream) or `collections.abc.Sequence[T]` (the
+	// fork default, immutable-correct for read-only result rows). Defaults to
+	// false (Sequence) when omitted. Set true to emit `list[T]` so result-row
+	// array fields match upstream sqlc-gen-python and stay assignable to
+	// consumers typed `list[T]`.
+	EmitListArrays              *bool                 `json:"emit_list_arrays,omitempty" yaml:"emit_list_arrays,omitempty"`
 	OmitUnusedModels            bool                  `json:"omit_unused_models" yaml:"omit_unused_models"`
 	OmitTypecheckingBlock       bool                  `json:"omit_typechecking_block" yaml:"omit_typechecking_block"`
 	QueryParameterLimit         *int32                `json:"query_parameter_limit,omitempty" yaml:"query_parameter_limit"`
@@ -141,6 +148,13 @@ func ParseConfig(req *plugin.GenerateRequest) (*Config, error) {
 		// verbatim, drop-in-from-upstream behaviour.
 		config.SingularizeResultColumns = new(bool)
 		*config.SingularizeResultColumns = true
+	}
+	if config.EmitListArrays == nil {
+		// Default false preserves the historical `collections.abc.Sequence[T]`
+		// array rendering (and every committed golden). Only an explicit `true`
+		// opts into the builtin `list[T]` (drop-in-from-upstream) rendering.
+		config.EmitListArrays = new(bool)
+		*config.EmitListArrays = false
 	}
 
 	config.InitialismsMap = map[string]struct{}{}

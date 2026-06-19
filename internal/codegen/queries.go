@@ -30,7 +30,11 @@ func (dr *Driver) prepareFunctionHeader(query *core.Query, body *builders.Indent
 				})
 			} else {
 				if arg.Typ.IsList {
-					argType = fmt.Sprintf("collections.abc.Sequence[%s]", argType)
+					if arg.Typ.ListIsBuiltin {
+						argType = fmt.Sprintf("list[%s]", argType)
+					} else {
+						argType = fmt.Sprintf("collections.abc.Sequence[%s]", argType)
+					}
 				}
 				if arg.Typ.IsNullable {
 					argType = fmt.Sprintf("%s | None", argType)

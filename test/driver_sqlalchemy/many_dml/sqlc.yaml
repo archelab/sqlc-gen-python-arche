@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: dfae30c300e60390c91c4788920c00158be5ec45f4d6c13c9bf73d1ba9e432df
+      sha256: b25ac08c9e82bdf3cc0f24d12a10a0ff6af405919005d863c8d11ed4ecfbc64d
 sql:
   # Proves P-03 (C-#13): a :many whose SQL root is a DML statement
   # (UPDATE/DELETE/INSERT ... RETURNING) emits

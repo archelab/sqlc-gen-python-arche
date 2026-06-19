@@ -24,6 +24,10 @@ type PyType struct {
 	IsEnum      bool
 	IsOverride  bool
 	Override    *Override
+	// ListIsBuiltin, when IsList is true, selects the array annotation: builtin
+	// `list[T]` (emit_list_arrays:true, drop-in) vs `collections.abc.Sequence[T]`
+	// (the default). Inert when IsList is false.
+	ListIsBuiltin bool
 }
 
 func (p *PyType) DoConversion(conversion typeConversion.TypeDoTypeConversion) bool {

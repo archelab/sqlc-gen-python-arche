@@ -198,7 +198,7 @@ func collectAnnotationModules(typ PyType, name string, mods map[string]struct{})
 			mods[prefix] = struct{}{}
 		}
 	}
-	if typ.IsList {
+	if typ.IsList && !typ.ListIsBuiltin {
 		mods["collections.abc"] = struct{}{}
 	}
 	if _, escaped := EscapeFieldName(name); escaped {
@@ -463,8 +463,9 @@ func (i *Importer) queryFieldTypeModules() map[string]struct{} {
 			}
 			return
 		}
-		// A flat list arg/return is emitted as `collections.abc.Sequence[T]`.
-		if qv.Typ.IsList {
+		// A flat list arg/return is emitted as `collections.abc.Sequence[T]`
+		// (or the builtin `list[T]` under emit_list_arrays, which needs no import).
+		if qv.Typ.IsList && !qv.Typ.ListIsBuiltin {
 			mods["collections.abc"] = struct{}{}
 		}
 	}

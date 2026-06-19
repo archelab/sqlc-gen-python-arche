@@ -5,11 +5,9 @@ plugins:
       url: file://../sqlc-gen-python-arche.wasm
       sha256: b25ac08c9e82bdf3cc0f24d12a10a0ff6af405919005d863c8d11ed4ecfbc64d
 sql:
-  # P-22 sqlc.embed parity: the embedded `author` table composes a nested
-  # models.Author sub-struct field on the GetBookWithAuthor Row (inherited
-  # better-python behaviour; pinned here for the sqlalchemy/pydantic driver, and
-  # exercising the builders.go:385-391 embed branch that the F2 nullability seam
-  # leaves out of scope).
+  # Pins the v0.5.2 drop-in-from-upstream fixes (B duplicate-column de-collision,
+  # C emit_list_arrays list[T], E FOR-UPDATE :many streams). Uses the same option
+  # set arche pins so the golden mirrors arche's emitted shape.
   - schema: schema.sql
     queries: queries.sql
     engine: postgresql
@@ -17,8 +15,10 @@ sql:
       - out: gen
         plugin: python
         options:
-          package: test.driver_sqlalchemy.embed.gen
+          package: test.driver_sqlalchemy.dropin_fixes.gen
           sql_driver: sqlalchemy
           model_type: pydantic
           emit_classes: true
           emit_init_file: false
+          singularize_result_columns: false
+          emit_list_arrays: true
