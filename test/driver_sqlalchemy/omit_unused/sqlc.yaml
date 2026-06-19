@@ -1,0 +1,22 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # P-19 omit_unused_models: an unreferenced table model is dropped from
+  # models.py (inherited config; pinned here for the sqlalchemy/pydantic driver).
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.omit_unused.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          omit_unused_models: true

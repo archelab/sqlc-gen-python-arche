@@ -1,0 +1,41 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+    assignees:
+      - pedro-pscunha
+    reviewers:
+      - pedro-pscunha
+    rebase-strategy: auto
+    target-branch: main
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    assignees:
+      - pedro-pscunha
+    reviewers:
+      - pedro-pscunha
+    rebase-strategy: auto
+    target-branch: main
+  # Python test-harness deps (pyproject.toml + uv.lock). NOTE: a Go (gomod) bump
+  # that changes the compiled wasm will fail the `wasm-pins` CI job until someone
+  # re-runs scripts/build/build.sh to re-pin the sqlc.yaml shas — Go bumps are
+  # effectively manual on this repo. Python and Actions bumps are wasm-safe.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: daily
+    assignees:
+      - pedro-pscunha
+    reviewers:
+      - pedro-pscunha
+    rebase-strategy: auto
+    target-branch: main

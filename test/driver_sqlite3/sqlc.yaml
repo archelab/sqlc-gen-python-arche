@@ -1,0 +1,135 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /attrs/classes
+        plugin: python
+        options:
+          package: test.driver_sqlite3.attrs.classes
+          sql_driver: sqlite3
+          model_type: attrs
+          emit_classes: true
+          omit_unused_models: false
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: numpy
+          speedups: true
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /attrs/functions
+        plugin: python
+        options:
+          package: test.driver_sqlite3.attrs.functions
+          sql_driver: sqlite3
+          model_type: attrs
+          emit_classes: false
+          omit_unused_models: true
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: numpy
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /dataclass/classes
+        plugin: python
+        options:
+          package: test.driver_sqlite3.dataclass.classes
+          sql_driver: sqlite3
+          model_type: dataclass
+          emit_classes: true
+          omit_unused_models: true
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: google
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /dataclass/functions
+        plugin: python
+        options:
+          package: test.driver_sqlite3.dataclass.functions
+          sql_driver: sqlite3
+          model_type: dataclass
+          emit_classes: false
+          omit_unused_models: true
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: google
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /msgspec/classes
+        plugin: python
+        options:
+          package: test.driver_sqlite3.msgspec.classes
+          sql_driver: sqlite3
+          model_type: msgspec
+          emit_classes: true
+          omit_unused_models: true
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: pep257
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+  - schema: schema.sql
+    queries: queries.sql
+    engine: sqlite
+    codegen:
+      - out: /msgspec/functions
+        plugin: python
+        options:
+          package: test.driver_sqlite3.msgspec.functions
+          sql_driver: sqlite3
+          model_type: msgspec
+          emit_classes: false
+          omit_unused_models: true
+          emit_init_file: true
+          query_parameter_limit: 0
+          docstrings: pep257
+          overrides:
+            - column: test_type_override.text_test
+              py_type:
+                import: collections
+                package: UserString
+                type: UserString
+

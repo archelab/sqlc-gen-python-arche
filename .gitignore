@@ -1,0 +1,66 @@
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# env file
+.env
+
+# mise local (personal, machine-specific) task/tool overrides. The tracked
+# mise.toml is the shared config; these are gitignored.
+mise.local.toml
+.mise.local.toml
+
+__pycache__/
+
+# Python coverage artifacts.
+.coverage
+coverage.xml
+
+# Tooling caches, IDE configs, and local virtualenvs.
+.idea/
+.nox/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Scratch workspace (one-shot scripts, repros, regen helpers). Not tracked and
+# not linted — ruff respects .gitignore, so this keeps session scratch out of
+# the broad ruff/pyright sweeps.
+.tmp/
+
+# Local pytest sqlite fixture db (and any other local SQLite databases).
+sqlite.db
+*.db
+
+# Built wasm plugin artifact (produced by scripts/build/build.sh, published to
+# S3 / the GitHub release — NEVER committed, anywhere). build.sh builds it once
+# at the repo root and copies it beside every sqlc.yaml (the root copy + the
+# per-driver test copies) so sqlc's `file://../sqlc-gen-python-arche.wasm` URL
+# resolves locally; all of those are gitignored build artifacts, NOT tracked
+# fixtures. Committing them was a 117MB, staleness-prone mistake (5×24MB copies
+# that could drift from the Go source). The single source of truth is the Go
+# code under plugin/ + internal/; the goldens are kept honest by the nox
+# sessions building the wasm fresh from source before every `sqlc diff`, and the
+# committed sqlc.yaml sha256 pins are proven to match a reproducible
+# (GOTOOLCHAIN-pinned) source build by the `wasm-pins` CI job.
+sqlc-gen-python-arche.wasm
+*.wasm

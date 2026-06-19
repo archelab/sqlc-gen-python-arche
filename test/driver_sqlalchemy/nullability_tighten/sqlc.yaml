@@ -1,0 +1,43 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves the NullabilityOverride TIGHTEN mechanism (ruling F2, P-05) on the
+  # LockChargeRowsRow shape: a COALESCE(x, non-null-literal) column
+  # tightened to non-Optional while the sibling CASE-WHEN column (Table==nil)
+  # stays Optional. A TABLE-QUALIFIED override (ledger_charge.charge_penalty_value)
+  # hits ONLY the COALESCE column that retains its source Table; the CASE-WHEN
+  # result column has no Table, so the override leaves it untouched — exactly
+  # the scope-the-tighten-to-Charge-only intent.
+  #
+  # Aliases (charge_penalty_value / charge_interest_value) are chosen
+  # singular-stable so the result-column singularizer does not mangle them.
+  # Singularizer over-match is a SEPARATE concern — see the over-match audit in
+  # test/driver_sqlalchemy/README.md, not a nullability concern.
+  #
+  # Precedence (nullability applied AFTER type-remap) is golden-pinned at the
+  # chokepoint by internal/nullability_chokepoint_test.go::
+  # TestChokepointNullabilityAfterTypeRemap (a py_type override remaps the type,
+  # the NullabilityOverride then forces nullability on the same column, both
+  # survive). It is NOT re-exercised here to keep this golden a clean
+  # COALESCE-vs-CASE-WHEN tighten proof.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.nullability_tighten.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          nullability_overrides:
+            - column: ledger_charge.charge_penalty_value
+              nullable: false
+            - column: ledger_charge.charge_interest_value
+              nullable: false

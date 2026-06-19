@@ -1,0 +1,27 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Pins the C-#15 keyword-only-vs-bundle boundary at query_parameter_limit: 2:
+  #   - 1 param (below)  -> `(self, *, a)` keyword-only
+  #   - 2 params (== qpl) -> `(self, *, a, b)` keyword-only (NOT bundled)
+  #   - 3 params (above) -> `(self, arg: <Method>Params)` positional bundle,
+  #     body reads arg.field
+  # plus the P-16 flat-arg de-collision (two `status` -> status / status_2) and
+  # the placeholder-number-keyed bind dict.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.params_boundary.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false
+          query_parameter_limit: 2

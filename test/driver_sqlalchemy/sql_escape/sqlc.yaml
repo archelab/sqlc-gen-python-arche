@@ -1,0 +1,23 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # MAJOR-1 escape proof: the body rewrite escapes EVERY colon (cast AND a
+  # non-cast literal colon in 'a:b'), then rewrites $N -> :pN. The golden pins
+  # `count(*)\\:\\:bigint`, `'a\\:b'`, `= :p1\\:\\:bigint`, and the header
+  # `\\:one`.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.sql_escape.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

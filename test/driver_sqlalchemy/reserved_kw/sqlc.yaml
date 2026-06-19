@@ -1,0 +1,24 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves P-14 (C-#14): the `class` / `from` keyword columns escape to
+  # `class_` / `from_` with `pydantic.Field(alias="class")` and a class-level
+  # `populate_by_name=True`; the `id` column stays raw `id: int` (NOT a keyword
+  # — byte-faithful to the reference). Both the :one model construction and the :many
+  # async-generator yield use the escaped field names as constructor kwargs.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.reserved_kw.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

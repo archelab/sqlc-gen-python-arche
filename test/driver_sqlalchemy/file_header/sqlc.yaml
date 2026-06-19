@@ -1,0 +1,25 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves the F5 file_header primitive (C-#11): file_header set + emit_init_file
+  # true means the literal is absolute line 1 of models.py, the query file, AND
+  # __init__.py, before the sqlc header — replacing analytics's per-file prepend
+  # loop. Every OTHER sqlalchemy case (no file_header) proves the unset no-op,
+  # and emit_init_file:false there proves no __init__.py is emitted.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.file_header.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: true
+          file_header: "# pyright: basic"

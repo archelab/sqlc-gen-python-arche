@@ -1,0 +1,25 @@
+version: "2"
+plugins:
+  - name: python
+    wasm:
+      url: file://../sqlc-gen-python-arche.wasm
+      sha256: ae82dcd410956538f871680a271dd9c1f4def9365fe47232df2b227c6fafccb6
+sql:
+  # Proves P-11 (C-#16): the order_status PG ENUM emits
+  # `class OrderStatus(enum.StrEnum):` into models.py with double-quoted values
+  # and clean uppercased member names (PENDING / SHIPPED / OUT_FOR_DELIVERY /
+  # DELIVERED). models.py imports stdlib `enum`; the enum-typed column is the
+  # bare `OrderStatus` inside models.py and `models.OrderStatus` in the query
+  # file. Insurance — a typical consumer has zero PG ENUM columns.
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - out: gen
+        plugin: python
+        options:
+          package: test.driver_sqlalchemy.str_enum.gen
+          sql_driver: sqlalchemy
+          model_type: pydantic
+          emit_classes: true
+          emit_init_file: false

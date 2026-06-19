@@ -1,0 +1,89 @@
+[project]
+name = "sqlc-gen-python-arche"
+version = "0.1.0"
+description = "Test and development harness for the sqlc-gen-python-arche wasm plugin (a fork of sqlc-gen-better-python)."
+# Floor is 3.11, not 3.10: the generator emits `enum.StrEnum` for enum columns,
+# which only exists on Python 3.11+ (the generated code raises AttributeError at
+# import on 3.10). pyright is already pinned to 3.11 for the same reason.
+requires-python = ">=3.11,<3.14.0"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "asyncpg>=0.30.0",
+    "attrs>=25.3.0",
+    "ciso8601>=2.3.2",
+    "msgspec>=0.19.0",
+    "pydantic>=2.0.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "nox>=2025.5.1",
+]
+dev-complete = [
+    "nox>=2025.5.1",
+    { include-group = "pyright"},
+    { include-group = "pytest"},
+    { include-group = "ruff" },
+]
+pyright = [
+    "asyncpg-stubs>=0.30.1",
+    "pyright>=1.1.400",
+    { include-group = "pytest" }
+]
+coverage = [
+    "coverage[toml]>=7.8.0",
+]
+pytest = [
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-dependency>=0.6.0",
+    { include-group = "coverage" },
+]
+ruff = [
+    "ruff>=0.11.9",
+]
+
+[tool.pyright]
+# The generator emits `enum.StrEnum` (Python 3.11+), so the type-checker floor
+# must be 3.11 — at "3.10" pyright does not know StrEnum, treats a
+# `class X(enum.StrEnum)` as a plain str subclass, and collapses members to their
+# `Literal[value]` str type, which silently mis-analyses every generated enum
+# (e.g. rejects `WidgetKind.ACTIVE` for a `kind: WidgetKind` parameter).
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+
+reportUnnecessaryTypeIgnoreComment = "error"
+deprecateTypingAliases = true
+reportCallInDefaultInitializer = true
+reportImplicitOverride = true
+reportImplicitStringConcatenation = true
+reportImportCycles = true
+reportPropertyTypeMismatch = true
+reportShadowedImports = true
+reportUninitializedInstanceVariable = true
+
+
+[tool.pytest.ini_options]
+required_plugins = ["pytest-asyncio", "pytest-dependency"]
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.coverage.run]
+relative_files = true
+parallel = true
+branch = true
+omit = ["**/*test*.py"]
+
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "\\#\\s*pragma: no cover$",
+    "^\\s*if typing.TYPE_CHECKING:$",
+    # -------------- custom for adapters / converters ----------------
+    "^\\s*def _adapt_",
+    "^\\s*def _convert_",
+]
+
