@@ -47,16 +47,22 @@ func SQLAlchemyRewriteHeaderVerb(verb string) string {
 // Query.Comments (without the `--`) and strips it from the SQL text. A comment
 // whose first word is the marker keeps that query on a server-side cursor
 // (conn.stream), for a result too large to buffer in memory. The reason goes
-// after the marker: `-- @stream <reason>`.
+// after the marker, `-- @stream <reason>`, and is required: it is the only
+// record of why the query keeps the cursor.
 const sqlalchemyStreamMarker = "@stream"
 
-func sqlalchemyKeepsStream(query *core.Query) bool {
+// sqlalchemyKeepsStream reports whether the query carries the marker, and
+// fails when the marker has no reason after it.
+func sqlalchemyKeepsStream(query *core.Query) (bool, error) {
 	for _, comment := range query.Comments {
 		if words := strings.Fields(comment); len(words) > 0 && words[0] == sqlalchemyStreamMarker {
-			return true
+			if len(words) == 1 {
+				return false, fmt.Errorf("query %s: the %s marker needs a reason: -- %s <why this result is too large to buffer>", query.MethodName, sqlalchemyStreamMarker, sqlalchemyStreamMarker)
+			}
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // SQLAlchemyBuildClassTemplate is the querier-class override. It differs from
@@ -96,8 +102,11 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		docstringConnType = ""
 	}
 
-	stream := sqlalchemyKeepsStream(query)
-	if stream && (query.Cmd != metadata.CmdMany || core.SQLRootIsDML(query.SQL)) {
+	stream, err := sqlalchemyKeepsStream(query)
+	if err != nil {
+		return err
+	}
+	if stream &&(query.Cmd != metadata.CmdMany || core.SQLRootIsDML(query.SQL)) {
 		return fmt.Errorf("query %s: the %s marker applies only to a :many SELECT", query.MethodName, sqlalchemyStreamMarker)
 	}
 

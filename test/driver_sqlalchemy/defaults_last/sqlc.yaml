@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 097067b86e87d8dd0e5d9e97380112fa922443cfb47b6ae7b30f254350b33ff3
+      sha256: d718969197f16f79f584a26a73d906b4ba40796b26a6252096c74f375463a4ac
 sql:
   # P-18 defaults-last ordering regression: a pydantic Row mixing NOT NULL and
   # nullable columns keeps SELECT/column order with NO `= None` field default

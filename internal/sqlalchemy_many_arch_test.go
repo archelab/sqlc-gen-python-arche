@@ -204,6 +204,33 @@ func TestSQLAlchemyManyStreamMarkerKeepsStream(t *testing.T) {
 	}
 }
 
+// TestSQLAlchemyStreamMarkerNeedsReason: the text after `@stream` is the only
+// record of why a query keeps the cursor, so a bare marker fails loudly and
+// names the query.
+func TestSQLAlchemyStreamMarkerNeedsReason(t *testing.T) {
+	for _, comment := range []string{" @stream", " @stream   "} {
+		_, err := Generate(context.Background(), &plugin.GenerateRequest{
+			Catalog: fileAttachmentCatalog(),
+			Queries: []*plugin.Query{{
+				Name:     "ListAllUploadIds",
+				Cmd:      metadata.CmdMany,
+				Filename: "queries.sql",
+				Text:     "SELECT upload_id FROM file_attachment",
+				Comments: []string{comment},
+				Columns: []*plugin.Column{
+					{Name: "upload_id", NotNull: true, Type: &plugin.Identifier{Name: "text"}, Table: ident("file_attachment")},
+				},
+			}},
+			Settings: &plugin.Settings{Engine: "postgresql"},
+			PluginOptions: []byte(`{"package": "m", "sql_driver": "sqlalchemy", "model_type": "pydantic",
+				"emit_classes": true, "emit_init_file": false}`),
+		})
+		if err == nil || !strings.Contains(err.Error(), "ListAllUploadIds") || !strings.Contains(err.Error(), "needs a reason") {
+			t.Errorf("comment %q: a @stream marker with no reason must fail and name the query, got err=%v", comment, err)
+		}
+	}
+}
+
 // TestSQLAlchemyStreamMarkerOnlyOnManySelect: the marker is legal only where a
 // stream exists. On a :one, or on a :many over DML (Postgres rejects a
 // server-side cursor there), the plugin fails loudly instead of ignoring it.

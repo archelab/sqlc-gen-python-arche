@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 097067b86e87d8dd0e5d9e97380112fa922443cfb47b6ae7b30f254350b33ff3
+      sha256: d718969197f16f79f584a26a73d906b4ba40796b26a6252096c74f375463a4ac
 sql:
   # P-22 sqlc.embed parity: the embedded `author` table composes a nested
   # models.Author sub-struct field on the GetBookWithAuthor Row (inherited

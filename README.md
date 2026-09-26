@@ -182,8 +182,9 @@ server-side cursor and pays DECLARE, several FETCH round trips and CLOSE. Put
 `-- @stream <reason>` on its own line under `-- name:` to keep the cursor for a
 query whose result can be too large to hold in memory. sqlc passes that line to
 the plugin as a query comment and strips it from the SQL text, so the marker
-changes only the fetch. The marker must start the comment, and it is legal only
-on a `:many` SELECT: on any other query the plugin stops with an error.
+changes only the fetch. The marker must start the comment and must have a
+reason after it, and it is legal only on a `:many` SELECT. A marker with no
+reason, or on any other query, stops the plugin with an error.
 
 Positional `$N` parameters are rewritten to `:pN` named binds and passed as a
 dict (`{"p1": wid}`); every literal `:` in the SQL is escaped so casts like
