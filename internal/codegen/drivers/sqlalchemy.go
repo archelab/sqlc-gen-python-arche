@@ -42,6 +42,23 @@ func SQLAlchemyRewriteHeaderVerb(verb string) string {
 	return strings.ReplaceAll(verb, ":", `\\:`)
 }
 
+// sqlalchemyStreamMarker is the per-query opt-out from the buffered :many
+// SELECT. sqlc passes every full-line `--` comment of a query to the plugin in
+// Query.Comments (without the `--`) and strips it from the SQL text. A comment
+// whose first word is the marker keeps that query on a server-side cursor
+// (conn.stream), for a result too large to buffer in memory. The reason goes
+// after the marker: `-- @stream <reason>`.
+const sqlalchemyStreamMarker = "@stream"
+
+func sqlalchemyKeepsStream(query *core.Query) bool {
+	for _, comment := range query.Comments {
+		if words := strings.Fields(comment); len(words) > 0 && words[0] == sqlalchemyStreamMarker {
+			return true
+		}
+	}
+	return false
+}
+
 // SQLAlchemyBuildClassTemplate is the querier-class override. It differs from
 // defaultBuildClassTemplate on five points required by the SQLAlchemy surface:
 //
@@ -77,6 +94,11 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		conn = "self._conn"
 		indentLevel = 1
 		docstringConnType = ""
+	}
+
+	stream := sqlalchemyKeepsStream(query)
+	if stream && (query.Cmd != metadata.CmdMany || core.SQLRootIsDML(query.SQL)) {
+		return fmt.Errorf("query %s: the %s marker applies only to a :many SELECT", query.MethodName, sqlalchemyStreamMarker)
 	}
 
 	switch query.Cmd {
@@ -126,17 +148,24 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 			break
 		}
 		// The SQLAlchemy :many SELECT is a NATIVE async generator
-		// (collections.abc.AsyncIterator[T]) backed by conn.stream(...) +
-		// `async for row in result: yield ...`, NOT a QueryResults wrapper
-		// (driverBuildQueryResults stays the no-op default).
+		// (collections.abc.AsyncIterator[T]), NOT a QueryResults wrapper
+		// (driverBuildQueryResults stays the no-op default). It buffers by
+		// default: `result = await conn.execute(...)` + `for row in result:
+		// yield ...` is one round trip, where conn.stream pays a
+		// DECLARE/FETCH.../CLOSE server-side cursor cycle. A query marked
+		// `-- @stream` keeps conn.stream + `async for`.
+		fetch, loop := "execute", "for row in result:"
+		if stream {
+			fetch, loop = "stream", "async for row in result:"
+		}
 		body.WriteIndentedString(indentLevel, fmt.Sprintf("async def %s(%s", query.FuncName, params))
 		sqlalchemyWriteFunctionArgs(query, body, args, conf)
 		body.WriteLine(fmt.Sprintf(") -> collections.abc.AsyncIterator[%s]:", retType.Type))
 		body.WriteQueryFunctionDocstring(indentLevel+1, query, docstringConnType, args, retType)
-		body.WriteIndentedString(indentLevel+1, fmt.Sprintf("result = await %s.stream(sqlalchemy.text(%s)", conn, query.ConstantName))
+		body.WriteIndentedString(indentLevel+1, fmt.Sprintf("result = await %s.%s(sqlalchemy.text(%s)", conn, fetch, query.ConstantName))
 		sqlalchemyWriteParams(query, body, indentLevel+1)
 		body.WriteLine(")")
-		body.WriteIndentedLine(indentLevel+1, "async for row in result:")
+		body.WriteIndentedLine(indentLevel+1, loop)
 		sqlalchemyWriteYieldRowConstruction(query, body, retType, indentLevel)
 	default:
 		return fmt.Errorf("unsupported command for sqlalchemy driver in this batch: %s", query.Cmd)
@@ -157,10 +186,10 @@ func sqlalchemyValidateExpr(adapterVar, accessor string, nullable bool) string {
 	return fmt.Sprintf("%s.validate_python(%s)", adapterVar, accessor)
 }
 
-// sqlalchemyWriteYieldRowConstruction writes the :many `async for row in
-// result:` body: either `yield row[0]` for a scalar result or `yield
+// sqlalchemyWriteYieldRowConstruction writes the :many `for row in result:`
+// (or `async for`) body: either `yield row[0]` for a scalar result or `yield
 // models.X(field=row[N], ...)` for a struct, by integer index. The yield sits
-// one indent deeper than the :one `return` (under the `async for`).
+// one indent deeper than the :one `return` (under the loop).
 func sqlalchemyWriteYieldRowConstruction(query *core.Query, body *builders.IndentStringBuilder, retType core.PyType, indentLevel int) {
 	if !query.Ret.IsStruct() {
 		switch {

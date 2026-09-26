@@ -1,9 +1,10 @@
 -- Minimal repro of the reference file_attachment surface for the :many SELECT
 -- shape (C-#12). The native SQLAlchemy :many is an async generator:
 -- `async def f(...) -> collections.abc.AsyncIterator[Row]:` with
--- `result = await self._conn.stream(...)` + `async for row in result: yield
--- Row(...)`, byte-modelled on the reference list_expired_file_attachments query
--- (file_attachment.py). Includes a scalar :many to prove the
+-- `result = await self._conn.execute(...)` + `for row in result: yield
+-- Row(...)` (`conn.stream` + `async for` under `-- @stream`), byte-modelled
+-- on the reference list_expired_file_attachments query (file_attachment.py).
+-- Includes a scalar :many to prove the
 -- bare-value yield path too.
 CREATE TABLE IF NOT EXISTS file_attachment
 (

@@ -49,8 +49,9 @@ func runDriverQueryFile(t *testing.T, catalog *plugin.Catalog, queries []*plugin
 //     `def` method returning `-> QueryResults[...]` and constructing
 //     `QueryResults[...](...)`. (The wrapper's `__await__` is an eager fetch.)
 //   - SQLAlchemy `:many` → a native async generator: `async def ... ->
-//     collections.abc.AsyncIterator[...]` that `stream`s and `async for ...
-//     yield`s, and emits NO `QueryResults` class, return type, or constructor.
+//     collections.abc.AsyncIterator[...]` that fetches (buffered `execute`, or
+//     `stream` for a `-- @stream` query) and `yield`s row by row, and emits NO
+//     `QueryResults` class, return type, or constructor.
 //
 // A regression that collapsed the two idioms onto one base — e.g. routing
 // asyncpg through the no-op `driverBuildQueryResults`, or making SQLAlchemy reuse
@@ -109,13 +110,13 @@ func TestManyIdiomHeterogeneityIsIntentional(t *testing.T) {
 	}
 
 	// --- The heterogeneity itself: the two idioms are genuinely DIFFERENT. ---
-	// asyncpg buffers behind QueryResults; SQLAlchemy streams a bare
+	// asyncpg wraps behind QueryResults; SQLAlchemy yields from a bare
 	// AsyncIterator. If a regression converged them, one of these would flip.
 	asyncpgBuffers := strings.Contains(asyncpg, "QueryResults") &&
 		!strings.Contains(asyncpg, "-> collections.abc.AsyncIterator[str]:")
-	sqlalchemyStreams := !strings.Contains(sqlalchemy, "QueryResults") &&
+	sqlalchemyGenerates := !strings.Contains(sqlalchemy, "QueryResults") &&
 		strings.Contains(sqlalchemy, "-> collections.abc.AsyncIterator[str]:")
-	if !(asyncpgBuffers && sqlalchemyStreams) {
-		t.Errorf("the two :many idioms must stay distinct (asyncpg buffers=%v, sqlalchemy streams=%v)", asyncpgBuffers, sqlalchemyStreams)
+	if !(asyncpgBuffers && sqlalchemyGenerates) {
+		t.Errorf("the two :many idioms must stay distinct (asyncpg buffers=%v, sqlalchemy generates=%v)", asyncpgBuffers, sqlalchemyGenerates)
 	}
 }

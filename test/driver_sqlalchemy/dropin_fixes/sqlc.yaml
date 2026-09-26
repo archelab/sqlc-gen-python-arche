@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 9c5216ad925cce4b57ec9c48a1bb2c9c435898e30bef98ac56d03530c5ada79e
+      sha256: 097067b86e87d8dd0e5d9e97380112fa922443cfb47b6ae7b30f254350b33ff3
 sql:
   # Pins the v0.5.2 drop-in-from-upstream fixes (B duplicate-column de-collision,
   # C emit_list_arrays list[T], E FOR-UPDATE :many streams). Uses the same option

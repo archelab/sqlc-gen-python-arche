@@ -10,3 +10,8 @@ LIMIT sqlc.arg(limit_count)::integer;
 SELECT upload_id
 FROM file_attachment
 ORDER BY upload_id ASC;
+
+-- name: ListAllUploadIds :many
+-- @stream reads the whole table: a server-side cursor bounds the memory.
+SELECT upload_id
+FROM file_attachment;

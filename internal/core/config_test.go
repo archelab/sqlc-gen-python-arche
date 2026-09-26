@@ -3,7 +3,7 @@ package core
 import "testing"
 
 func TestPluginVersion(t *testing.T) {
-	const want = "v0.5.3"
+	const want = "v0.5.4"
 	if PluginVersion != want {
 		t.Fatalf("PluginVersion = %q, want %q", PluginVersion, want)
 	}

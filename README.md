@@ -43,8 +43,10 @@ it binds parameters through `sqlalchemy.text()` with `:pN` named placeholders, s
 it works with whichever async driver your engine uses (the live-Postgres tests
 exercise it over `asyncpg`). `:one`,
 `:many`, `:exec`, `:execrows`, and `:execresult` are supported. `:many` over a
-`SELECT` is a native async generator backed by `conn.stream(...)`; `:many` over
-a `DML ... RETURNING` materializes to `list[T]` via `result.all()`. See
+`SELECT` is a native async generator over a buffered `conn.execute(...)` (one
+round trip); a query marked `-- @stream` keeps `conn.stream(...)`, a server-side
+cursor, for a result too large to buffer. `:many` over a `DML ... RETURNING`
+materializes to `list[T]` via `result.all()`. See
 [The SQLAlchemy async driver](#the-sqlalchemy-async-driver).
 
 > This is the new `sqlalchemy` driver. It is distinct from the inherited
@@ -132,6 +134,10 @@ SELECT config FROM widget WHERE widget_id = sqlc.arg(wid)::integer;
 -- name: ListConfigs :many
 SELECT config FROM widget ORDER BY widget_id ASC;
 
+-- name: ListAllConfigs :many
+-- @stream reads the whole table: a server-side cursor bounds the memory.
+SELECT config FROM widget;
+
 -- name: DeleteWidgetsReturningConfig :many
 DELETE FROM widget WHERE widget_id = sqlc.arg(wid)::integer RETURNING config;
 ```
@@ -150,9 +156,15 @@ class AsyncQuerier:
             return None
         return ...
 
-    # :many SELECT -> native async generator backed by conn.stream
+    # :many SELECT -> native async generator over a buffered execute
     async def list_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
-        result = await self._conn.stream(sqlalchemy.text(LIST_CONFIGS))
+        result = await self._conn.execute(sqlalchemy.text(LIST_CONFIGS))
+        for row in result:
+            yield ...
+
+    # :many SELECT marked `-- @stream` -> native async generator backed by conn.stream
+    async def list_all_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
+        result = await self._conn.stream(sqlalchemy.text(LIST_ALL_CONFIGS))
         async for row in result:
             yield ...
 
@@ -163,6 +175,15 @@ class AsyncQuerier:
         )
         return [... for row in result.all()]
 ```
+
+A `:many` SELECT buffers by default: `conn.execute` fetches every row in one
+round trip, and the generator yields them from memory. `conn.stream` opens a
+server-side cursor and pays DECLARE, several FETCH round trips and CLOSE. Put
+`-- @stream <reason>` on its own line under `-- name:` to keep the cursor for a
+query whose result can be too large to hold in memory. sqlc passes that line to
+the plugin as a query comment and strips it from the SQL text, so the marker
+changes only the fetch. The marker must start the comment, and it is legal only
+on a `:many` SELECT: on any other query the plugin stops with an error.
 
 Positional `$N` parameters are rewritten to `:pN` named binds and passed as a
 dict (`{"p1": wid}`); every literal `:` in the SQL is escaped so casts like
@@ -263,10 +284,10 @@ class AsyncQuerier:
             return None
         return _WidgetPayload_adapter.validate_python(row[0])
 
-    # :many SELECT -> native async generator, each row validated as it streams
+    # :many SELECT -> native async generator, each row validated as it is yielded
     async def list_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
-        result = await self._conn.stream(sqlalchemy.text(LIST_CONFIGS))
-        async for row in result:
+        result = await self._conn.execute(sqlalchemy.text(LIST_CONFIGS))
+        for row in result:
             yield _WidgetConfig_adapter.validate_python(row[0])
 
     # :many over DELETE ... RETURNING -> materialized list, each element validated
@@ -294,7 +315,7 @@ async def get_widget(self, *, wid: int) -> models.Widget | None:
 ### Fail-loud behavior
 
 A stored value that violates the declared shape raises on read, on every path
-(scalar `:one`, struct `:one`, streamed `:many`, and `:many`-over-DML). For the
+(scalar `:one`, struct `:one`, `:many` SELECT, and `:many`-over-DML). For the
 union, a payload whose `kind` matches no member — or whose body is wrong for its
 `kind` — raises; a SQL `NULL` in a nullable validated column returns `None`
 rather than raising. This is exercised end-to-end against a real Postgres in
