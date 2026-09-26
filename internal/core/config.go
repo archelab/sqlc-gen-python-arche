@@ -10,14 +10,14 @@ import (
 const PluginVersion = "v0.5.4"
 
 type Config struct {
-	Package                     string                `json:"package" yaml:"package"`
-	SqlDriver                   SQLDriverType         `json:"sql_driver" yaml:"sql_driver"`
-	ModelType                   ModelType             `json:"model_type" yaml:"model_type"`
-	FileHeader                  *string               `json:"file_header,omitempty" yaml:"file_header,omitempty"`
-	Initialisms                 *[]string             `json:"initialisms,omitempty" yaml:"initialisms,omitempty"`
-	EmitExactTableNames         bool                  `json:"emit_exact_table_names" yaml:"emit_exact_table_names"`
-	EmitClasses                 bool                  `json:"emit_classes" yaml:"emit_classes"`
-	InflectionExcludeTableNames []string              `json:"inflection_exclude_table_names,omitempty" yaml:"inflection_exclude_table_names,omitempty"`
+	Package                     string        `json:"package" yaml:"package"`
+	SqlDriver                   SQLDriverType `json:"sql_driver" yaml:"sql_driver"`
+	ModelType                   ModelType     `json:"model_type" yaml:"model_type"`
+	FileHeader                  *string       `json:"file_header,omitempty" yaml:"file_header,omitempty"`
+	Initialisms                 *[]string     `json:"initialisms,omitempty" yaml:"initialisms,omitempty"`
+	EmitExactTableNames         bool          `json:"emit_exact_table_names" yaml:"emit_exact_table_names"`
+	EmitClasses                 bool          `json:"emit_classes" yaml:"emit_classes"`
+	InflectionExcludeTableNames []string      `json:"inflection_exclude_table_names,omitempty" yaml:"inflection_exclude_table_names,omitempty"`
 	// SingularizeResultColumns controls whether a query RESULT column's field
 	// name is singularized (the historical better-python behaviour) or emitted
 	// verbatim. Defaults to true (singularize) when omitted, so existing goldens
@@ -25,24 +25,24 @@ type Config struct {
 	// the SQL alias — required for a drop-in swap from upstream sqlc-gen-python,
 	// which never singularizes result columns. Base-TABLE model field names are
 	// always verbatim (buildTable) and are unaffected by this knob.
-	SingularizeResultColumns    *bool                 `json:"singularize_result_columns,omitempty" yaml:"singularize_result_columns,omitempty"`
+	SingularizeResultColumns *bool `json:"singularize_result_columns,omitempty" yaml:"singularize_result_columns,omitempty"`
 	// EmitListArrays controls whether an array column renders as the builtin
 	// `list[T]` (drop-in-from-upstream) or `collections.abc.Sequence[T]` (the
 	// fork default, immutable-correct for read-only result rows). Defaults to
 	// false (Sequence) when omitted. Set true to emit `list[T]` so result-row
 	// array fields match upstream sqlc-gen-python and stay assignable to
 	// consumers typed `list[T]`.
-	EmitListArrays              *bool                 `json:"emit_list_arrays,omitempty" yaml:"emit_list_arrays,omitempty"`
-	OmitUnusedModels            bool                  `json:"omit_unused_models" yaml:"omit_unused_models"`
-	OmitTypecheckingBlock       bool                  `json:"omit_typechecking_block" yaml:"omit_typechecking_block"`
-	QueryParameterLimit         *int32                `json:"query_parameter_limit,omitempty" yaml:"query_parameter_limit"`
-	OmitKwargsLimit             *int32                `json:"omit_kwargs_limit,omitempty" yaml:"omit_kwargs_limit"`
-	EmitInitFile                *bool                 `json:"emit_init_file" yaml:"emit_init_file"`
-	EmitDocstrings              *string               `json:"docstrings" yaml:"docstrings"`
-	EmitDocstringsSQL           *bool                 `json:"docstrings_emit_sql" yaml:"docstrings_emit_sql"`
-	Speedups                    bool                  `json:"speedups" yaml:"speedups"`
-	Overrides                   []Override            `json:"overrides,omitempty" yaml:"overrides"`
-	NullabilityOverrides        []NullabilityOverride `json:"nullability_overrides,omitempty" yaml:"nullability_overrides,omitempty"`
+	EmitListArrays        *bool                 `json:"emit_list_arrays,omitempty" yaml:"emit_list_arrays,omitempty"`
+	OmitUnusedModels      bool                  `json:"omit_unused_models" yaml:"omit_unused_models"`
+	OmitTypecheckingBlock bool                  `json:"omit_typechecking_block" yaml:"omit_typechecking_block"`
+	QueryParameterLimit   *int32                `json:"query_parameter_limit,omitempty" yaml:"query_parameter_limit"`
+	OmitKwargsLimit       *int32                `json:"omit_kwargs_limit,omitempty" yaml:"omit_kwargs_limit"`
+	EmitInitFile          *bool                 `json:"emit_init_file" yaml:"emit_init_file"`
+	EmitDocstrings        *string               `json:"docstrings" yaml:"docstrings"`
+	EmitDocstringsSQL     *bool                 `json:"docstrings_emit_sql" yaml:"docstrings_emit_sql"`
+	Speedups              bool                  `json:"speedups" yaml:"speedups"`
+	Overrides             []Override            `json:"overrides,omitempty" yaml:"overrides"`
+	NullabilityOverrides  []NullabilityOverride `json:"nullability_overrides,omitempty" yaml:"nullability_overrides,omitempty"`
 
 	Debug bool `json:"debug" yaml:"debug"`
 

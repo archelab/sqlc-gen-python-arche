@@ -178,7 +178,9 @@ class AsyncQuerier:
 
 A `:many` SELECT buffers by default: `conn.execute` fetches every row in one
 round trip, and the generator yields them from memory. `conn.stream` opens a
-server-side cursor and pays DECLARE, several FETCH round trips and CLOSE. Put
+server-side cursor: with asyncpg that is a protocol-level portal (not SQL
+DECLARE/FETCH), and it pays one fetch round trip per batch of rows plus
+closing the portal. Put
 `-- @stream <reason>` on its own line under `-- name:` to keep the cursor for a
 query whose result can be too large to hold in memory. sqlc passes that line to
 the plugin as a query comment and strips it from the SQL text, so the marker

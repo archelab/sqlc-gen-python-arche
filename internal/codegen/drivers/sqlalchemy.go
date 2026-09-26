@@ -106,7 +106,7 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 	if err != nil {
 		return err
 	}
-	if stream &&(query.Cmd != metadata.CmdMany || core.SQLRootIsDML(query.SQL)) {
+	if stream && (query.Cmd != metadata.CmdMany || core.SQLRootIsDML(query.SQL)) {
 		return fmt.Errorf("query %s: the %s marker applies only to a :many SELECT", query.MethodName, sqlalchemyStreamMarker)
 	}
 
@@ -160,8 +160,8 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		// (collections.abc.AsyncIterator[T]), NOT a QueryResults wrapper
 		// (driverBuildQueryResults stays the no-op default). It buffers by
 		// default: `result = await conn.execute(...)` + `for row in result:
-		// yield ...` is one round trip, where conn.stream pays a
-		// DECLARE/FETCH.../CLOSE server-side cursor cycle. A query marked
+		// yield ...` is one round trip, where conn.stream opens an asyncpg
+		// portal (not SQL DECLARE) and pays a fetch per batch. A query marked
 		// `-- @stream` keeps conn.stream + `async for`.
 		fetch, loop := "execute", "for row in result:"
 		if stream {
