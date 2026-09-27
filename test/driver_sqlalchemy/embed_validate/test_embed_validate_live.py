@@ -92,3 +92,27 @@ async def test_embedded_jsonb_mismatch_raises(
     await _seed(case_conn, author_id=2, settings_json=bad, book_id=11, title="x")
     with pytest.raises(pydantic.ValidationError):
         await queries.AsyncQuerier(case_conn).get_book_with_author(bid=11)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_row_constructor_builds_the_querier_row_from_a_wider_row(
+    case_conn: sqlalchemy.ext.asyncio.AsyncConnection,
+) -> None:
+    # The module-level `get_book_with_author_row` is the one row builder: the
+    # querier calls it, and a caller that fetches the row itself (a wrapping
+    # query that appends a trailing count column) calls it too. Both give the
+    # same value, embed and validated jsonb included, and a mismatch raises.
+    await _seed(case_conn, author_id=3, settings_json=_SETTINGS_JSON, book_id=12, title="Lathe")
+    await _seed(case_conn, author_id=4, settings_json=json.dumps({"unexpected": 1}), book_id=13, title="y")
+    wrapped = (
+        "WITH q AS (SELECT book.book_id, author.author_id, author.settings, book.title "
+        "FROM book JOIN author ON author.author_id = book.author_id WHERE book.book_id = :bid) "
+        "SELECT q.*, COUNT(*) OVER () AS affected FROM q"
+    )
+    row = (await case_conn.execute(sqlalchemy.text(wrapped), {"bid": 12})).one()
+    built = queries.get_book_with_author_row(row)
+    assert built == await queries.AsyncQuerier(case_conn).get_book_with_author(bid=12)
+    assert isinstance(built.author.settings, AuthorSettings)
+    bad_row = (await case_conn.execute(sqlalchemy.text(wrapped), {"bid": 13})).one()
+    with pytest.raises(pydantic.ValidationError):
+        queries.get_book_with_author_row(bad_row)

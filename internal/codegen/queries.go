@@ -187,6 +187,13 @@ func (dr *Driver) buildPyQueriesFile(imp *core.Importer, queries []core.Query, s
 	if dr.conf.EmitClasses {
 		allNames = append(allNames, dr.buildClassTemplate(sourceName, dr.connType, dr.conf, funcBody))
 	}
+	sqlalchemy := dr.conf.SqlDriver == core.SQLDriverSQLAlchemy
+	if sqlalchemy {
+		if err := drivers.SQLAlchemyCheckRowConstructorNames(queries, dr.conf); err != nil {
+			return nil, err
+		}
+	}
+	rowConstructors := builders.NewIndentStringBuilder(imp.C.IndentChar, imp.C.CharsPerIndentLevel)
 	for i, query := range queries {
 		args, retType, addedPyTableNames := dr.prepareFunctionHeader(&query, pyTableBody)
 		returnType := core.PyType{
@@ -200,6 +207,14 @@ func (dr *Driver) buildPyQueriesFile(imp *core.Importer, queries []core.Query, s
 		}
 		if i != len(queries)-1 {
 			funcBody.NNewLine(newLines)
+		}
+		// The SQLAlchemy methods build no row themselves: each row-returning
+		// query gets one module-level `<func>_row` constructor, emitted after
+		// the querier.
+		if sqlalchemy && drivers.SQLAlchemyHasRowConstructor(&query) {
+			rowConstructors.NNewLine(2)
+			drivers.SQLAlchemyBuildRowConstructor(&query, rowConstructors, returnType)
+			allNames = append(allNames, drivers.SQLAlchemyRowConstructorName(&query))
 		}
 	}
 	body.WriteLine(fmt.Sprintf("__all__: %s = (", allDunderAnnotation(dr.conf.ModelType)))
@@ -242,5 +257,5 @@ func (dr *Driver) buildPyQueriesFile(imp *core.Importer, queries []core.Query, s
 	if dr.conf.SqlDriver == core.SQLDriverSQLite {
 		drivers.SQLite3BuildTypeConvFunc(queries, body, dr.conf)
 	}
-	return []byte(body.String() + pyTableBody.String() + funcBody.String()), nil
+	return []byte(body.String() + pyTableBody.String() + funcBody.String() + rowConstructors.String()), nil
 }

@@ -86,6 +86,8 @@ ignore = [
     "D100", # Missing module docstring
     "D101", # Missing class docstring
     "D102", # Missing method docstring (the generator emits no method docstrings)
+    "D103", # Missing function docstring (the `<func>_row` row constructors carry none)
+    "FURB118", # operator.itemgetter: a scalar `<func>_row` is `return row[0]` by design
     "D104", # Missing package docstring
     "D204", # 1 blank line after class docstring
     "D406", # Section name should end with a newline
@@ -125,6 +127,8 @@ ignore = [
     "D100", # Missing module docstring (analytics header `# pyright: basic` is line 1)
     "D101", # Missing class docstring
     "D102", # Missing method docstring (the generator emits no method docstrings)
+    "D103", # Missing function docstring (the `<func>_row` row constructors carry none)
+    "FURB118", # operator.itemgetter: a scalar `<func>_row` is `return row[0]` by design
     "D104", # Missing package docstring (__init__.py is header-only)
     "ANN204", # Missing return type for __init__ (no `-> None`)
     "ANN401", # `typing.Any` fields: jsonb defaults to Any (P-09), intended.

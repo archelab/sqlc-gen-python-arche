@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: d718969197f16f79f584a26a73d906b4ba40796b26a6252096c74f375463a4ac
+      sha256: cd19d8c59cc933f237418152eadf86253d5348ffe2d6d1243b508ae4ee2db629
 sql:
   # Two jsonb columns overridden to typed pydantic shapes with `validate: true`,
   # so the generated read path emits

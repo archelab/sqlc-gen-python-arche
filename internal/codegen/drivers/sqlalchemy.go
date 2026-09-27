@@ -138,14 +138,14 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		body.WriteLine(")).first()")
 		body.WriteIndentedLine(indentLevel+1, "if row is None:")
 		body.WriteIndentedLine(indentLevel+2, "return None")
-		sqlalchemyWriteRowConstruction(query, body, retType, indentLevel)
+		body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return %s(row)", SQLAlchemyRowConstructorName(query)))
 	case metadata.CmdMany:
 		if core.SQLRootIsDML(query.SQL) {
 			// A :many over INSERT/UPDATE/DELETE ... RETURNING. Postgres
 			// rejects a server-side cursor (conn.stream) for a DML statement,
 			// so materialize the rows eagerly:
-			// `result = await conn.execute(...); return [Row(..) for row in
-			// result.all()]` returning list[T]. NOT conn.stream.
+			// `result = await conn.execute(...); return [<func>_row(row) for
+			// row in result.all()]` returning list[T]. NOT conn.stream.
 			body.WriteIndentedString(indentLevel, fmt.Sprintf("async def %s(%s", query.FuncName, params))
 			sqlalchemyWriteFunctionArgs(query, body, args, conf)
 			body.WriteLine(fmt.Sprintf(") -> list[%s]:", retType.Type))
@@ -153,7 +153,7 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 			body.WriteIndentedString(indentLevel+1, fmt.Sprintf("result = await %s.execute(sqlalchemy.text(%s)", conn, query.ConstantName))
 			sqlalchemyWriteParams(query, body, indentLevel+1)
 			body.WriteLine(")")
-			sqlalchemyWriteListComprehension(query, body, retType, indentLevel)
+			body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return [%s(row) for row in result.all()]", SQLAlchemyRowConstructorName(query)))
 			break
 		}
 		// The SQLAlchemy :many SELECT is a NATIVE async generator
@@ -175,7 +175,7 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		sqlalchemyWriteParams(query, body, indentLevel+1)
 		body.WriteLine(")")
 		body.WriteIndentedLine(indentLevel+1, loop)
-		sqlalchemyWriteYieldRowConstruction(query, body, retType, indentLevel)
+		body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("yield %s(row)", SQLAlchemyRowConstructorName(query)))
 	default:
 		return fmt.Errorf("unsupported command for sqlalchemy driver in this batch: %s", query.Cmd)
 	}
@@ -193,29 +193,6 @@ func sqlalchemyValidateExpr(adapterVar, accessor string, nullable bool) string {
 		return fmt.Sprintf("%s.validate_python(%s) if %s is not None else None", adapterVar, accessor, accessor)
 	}
 	return fmt.Sprintf("%s.validate_python(%s)", adapterVar, accessor)
-}
-
-// sqlalchemyWriteYieldRowConstruction writes the :many `for row in result:`
-// (or `async for`) body: either `yield row[0]` for a scalar result or `yield
-// models.X(field=row[N], ...)` for a struct, by integer index. The yield sits
-// one indent deeper than the :one `return` (under the loop).
-func sqlalchemyWriteYieldRowConstruction(query *core.Query, body *builders.IndentStringBuilder, retType core.PyType, indentLevel int) {
-	if !query.Ret.IsStruct() {
-		switch {
-		case query.Ret.Typ.DoValidate():
-			body.WriteIndentedLine(indentLevel+2, "yield "+sqlalchemyValidateExpr(core.ValidateAdapterVar(retType.Type), "row[0]", query.Ret.Typ.IsNullable))
-		case retType.DoOverride():
-			body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("yield %s(row[0])", retType.Type))
-		default:
-			body.WriteIndentedLine(indentLevel+2, "yield row[0]")
-		}
-		return
-	}
-	body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("yield %s(", retType.Type))
-	for _, kw := range sqlalchemyRowKwargs(query.Ret.Table) {
-		body.WriteIndentedLine(indentLevel+3, kw+",")
-	}
-	body.WriteIndentedLine(indentLevel+2, ")")
 }
 
 // sqlalchemyRowKwargs builds the ordered `field=row[N]` keyword list for a
@@ -265,11 +242,55 @@ func sqlalchemyColKwarg(col core.Column, i int) string {
 	return fmt.Sprintf("%s=row[%s]", name, idx)
 }
 
-// sqlalchemyWriteRowConstruction writes the `:one` return statement: either a
-// bare `return row[0]` for a scalar result or a `return models.X(field=row[N],
-// ...)` for a struct, by running row index (handling sqlc.embed expansion via
-// sqlalchemyRowKwargs).
-func sqlalchemyWriteRowConstruction(query *core.Query, body *builders.IndentStringBuilder, retType core.PyType, indentLevel int) {
+// SQLAlchemyRowConstructorName is the module-level per-row constructor of a
+// row-returning query: `<func>_row`. The querier's :one, :many and :many-over-DML
+// bodies call it, and so does any consumer that builds the same row from a
+// result it fetched itself (arche's chat dispatcher streams the query constant).
+func SQLAlchemyRowConstructorName(query *core.Query) string {
+	return query.FuncName + "_row"
+}
+
+// SQLAlchemyHasRowConstructor reports whether the query returns rows, and so
+// gets a row constructor.
+func SQLAlchemyHasRowConstructor(query *core.Query) bool {
+	return query.Cmd == metadata.CmdOne || query.Cmd == metadata.CmdMany
+}
+
+// SQLAlchemyCheckRowConstructorNames stops generation when a constructor name
+// is also a query function name. That can only happen without emit_classes,
+// where the query functions live at module level next to the constructors.
+func SQLAlchemyCheckRowConstructorNames(queries []core.Query, conf *core.Config) error {
+	if conf.EmitClasses {
+		return nil
+	}
+	funcs := make(map[string]bool, len(queries))
+	for _, query := range queries {
+		funcs[query.FuncName] = true
+	}
+	for i := range queries {
+		if name := SQLAlchemyRowConstructorName(&queries[i]); SQLAlchemyHasRowConstructor(&queries[i]) && funcs[name] {
+			return fmt.Errorf("query %s: its row constructor %s has the name of another query function", queries[i].MethodName, name)
+		}
+	}
+	return nil
+}
+
+// SQLAlchemyBuildRowConstructor writes the module-level
+// `def <func>_row(row: sqlalchemy.Row[typing.Any]) -> T:`, the one place that
+// builds a result row: either a bare `return row[0]` for a scalar result or a
+// `return models.X(field=row[N], ...)` for a struct, by running row index
+// (handling sqlc.embed expansion via sqlalchemyRowKwargs). The indexes are
+// positional from 0, so a row with extra trailing columns (a count appended by
+// a wrapping query) builds the same value.
+func SQLAlchemyBuildRowConstructor(query *core.Query, body *builders.IndentStringBuilder, retType core.PyType) {
+	// A nullable validated scalar returns None for a SQL NULL, so its
+	// constructor says so. Every other scalar reads row[0] unwrapped (typed
+	// Any), and its constructor keeps the querier's element type.
+	annotation := retType.Type
+	if !query.Ret.IsStruct() && query.Ret.Typ.DoValidate() && query.Ret.Typ.IsNullable {
+		annotation += " | None"
+	}
+	body.WriteLine(fmt.Sprintf("def %s(row: sqlalchemy.Row[typing.Any]) -> %s:", SQLAlchemyRowConstructorName(query), annotation))
 	if !query.Ret.IsStruct() {
 		// The validate decision reads the FULL result type (query.Ret.Typ carries
 		// the override + Validate); `retType` here is the stripped header type
@@ -277,46 +298,19 @@ func sqlalchemyWriteRowConstruction(query *core.Query, body *builders.IndentStri
 		// inert — preserving the SQLAlchemy read-unwrapped (#161) byte shape.
 		switch {
 		case query.Ret.Typ.DoValidate():
-			body.WriteIndentedLine(indentLevel+1, "return "+sqlalchemyValidateExpr(core.ValidateAdapterVar(retType.Type), "row[0]", query.Ret.Typ.IsNullable))
+			body.WriteIndentedLine(1, "return "+sqlalchemyValidateExpr(core.ValidateAdapterVar(retType.Type), "row[0]", query.Ret.Typ.IsNullable))
 		case retType.DoOverride():
-			body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return %s(row[0])", retType.Type))
+			body.WriteIndentedLine(1, fmt.Sprintf("return %s(row[0])", retType.Type))
 		default:
-			body.WriteIndentedLine(indentLevel+1, "return row[0]")
+			body.WriteIndentedLine(1, "return row[0]")
 		}
 		return
 	}
-	body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return %s(", retType.Type))
+	body.WriteIndentedLine(1, fmt.Sprintf("return %s(", retType.Type))
 	for _, kw := range sqlalchemyRowKwargs(query.Ret.Table) {
-		body.WriteIndentedLine(indentLevel+2, kw+",")
+		body.WriteIndentedLine(2, kw+",")
 	}
-	body.WriteIndentedLine(indentLevel+1, ")")
-}
-
-// sqlalchemyWriteListComprehension writes the :many-over-DML return: a
-// list comprehension over result.all(). A scalar result is a one-liner
-// `return [row[0] for row in result.all()]`; a struct result is a multiline
-// comprehension constructing `models.X(field=row[N], ...)` per row (handling
-// sqlc.embed expansion via sqlalchemyRowKwargs).
-func sqlalchemyWriteListComprehension(query *core.Query, body *builders.IndentStringBuilder, retType core.PyType, indentLevel int) {
-	if !query.Ret.IsStruct() {
-		switch {
-		case query.Ret.Typ.DoValidate():
-			body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return [%s for row in result.all()]", sqlalchemyValidateExpr(core.ValidateAdapterVar(retType.Type), "row[0]", query.Ret.Typ.IsNullable)))
-		case retType.DoOverride():
-			body.WriteIndentedLine(indentLevel+1, fmt.Sprintf("return [%s(row[0]) for row in result.all()]", retType.Type))
-		default:
-			body.WriteIndentedLine(indentLevel+1, "return [row[0] for row in result.all()]")
-		}
-		return
-	}
-	body.WriteIndentedLine(indentLevel+1, "return [")
-	body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("%s(", retType.Type))
-	for _, kw := range sqlalchemyRowKwargs(query.Ret.Table) {
-		body.WriteIndentedLine(indentLevel+3, kw+",")
-	}
-	body.WriteIndentedLine(indentLevel+2, ")")
-	body.WriteIndentedLine(indentLevel+2, "for row in result.all()")
-	body.WriteIndentedLine(indentLevel+1, "]")
+	body.WriteIndentedLine(1, ")")
 }
 
 // sqlalchemyWriteParams emits the named-bind dict `{"pN": value, ...}` the

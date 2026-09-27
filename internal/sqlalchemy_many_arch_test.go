@@ -138,11 +138,15 @@ func TestSQLAlchemyManyIsNativeAsyncGenerator(t *testing.T) {
 	if !strings.Contains(out, "        for row in result:") {
 		t.Error("an unmarked :many must iterate with `for row in result:`")
 	}
-	if !strings.Contains(out, "yield models.FileAttachment(") {
-		t.Error("struct :many must yield models.X(...)")
+	// Each row comes from the query's module-level row constructor.
+	if !strings.Contains(out, "            yield list_expired_file_attachments_row(row)\n") {
+		t.Error("struct :many must yield its row constructor")
 	}
-	if !strings.Contains(out, "yield row[0]") {
-		t.Error("scalar :many must yield row[0]")
+	if !strings.Contains(out, "def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:\n    return models.FileAttachment(\n") {
+		t.Error("struct row constructor must build models.X(...)")
+	}
+	if !strings.Contains(out, "def list_upload_ids_row(row: sqlalchemy.Row[typing.Any]) -> str:\n    return row[0]\n") {
+		t.Error("scalar row constructor must return row[0]")
 	}
 }
 
@@ -156,6 +160,10 @@ func methodBody(t *testing.T, out, fn string) string {
 	}
 	body := out[i:]
 	if j := strings.Index(body[1:], "async def "); j >= 0 {
+		body = body[:j+1]
+	}
+	// The row constructors follow the last method at module level.
+	if j := strings.Index(body, "\ndef "); j >= 0 {
 		body = body[:j+1]
 	}
 	return body

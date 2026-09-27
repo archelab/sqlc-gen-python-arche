@@ -1,10 +1,12 @@
 package drivers
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/archelab/sqlc-gen-python-arche/internal/codegen/builders"
 	"github.com/archelab/sqlc-gen-python-arche/internal/core"
+	"github.com/sqlc-dev/plugin-sdk-go/metadata"
 )
 
 // TestSQLAlchemyRewriteSQL pins the escape rule: escape EVERY colon to `\\:`
@@ -100,6 +102,131 @@ func TestSQLAlchemyRowKwargsEmbedRunningIndex(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("sqlalchemyRowKwargs[%d]\n got = %q\nwant = %q", i, got[i], want[i])
 		}
+	}
+}
+
+// rowConstructorQuery is a struct-returning query whose result carries a
+// validated jsonb column and a nullable override column, the two shapes that
+// wrap `row[N]` in more than a plain keyword.
+func rowConstructorQuery(cmd, sql string, comments []string) *core.Query {
+	validated := core.Column{Name: "config", Type: core.PyType{
+		Type:       "WidgetConfig",
+		IsOverride: true,
+		Override:   &core.Override{Validate: true},
+	}}
+	token := core.Column{Name: "lease", Type: core.PyType{
+		Type:       "LeaseToken",
+		IsNullable: true,
+		IsOverride: true,
+		Override:   &core.Override{},
+	}}
+	return &core.Query{
+		FuncName:     "get_widget",
+		MethodName:   "GetWidget",
+		Cmd:          cmd,
+		Comments:     comments,
+		ConstantName: "GET_WIDGET",
+		SQL:          sql,
+		Ret: core.QueryValue{Table: &core.Table{
+			Name:    "GetWidgetRow",
+			Columns: []core.Column{{Name: "widget_id", Type: core.PyType{Type: "int"}}, validated, token},
+		}},
+	}
+}
+
+// TestSQLAlchemyRowConstructorIsTheOneRowBuilder pins the single per-row
+// builder: every row-returning method shape (:one, buffered :many, `-- @stream`
+// :many, :many over DML) calls the module-level `<func>_row(row)` constructor
+// and builds no row itself, and the constructor holds the whole construction.
+// A consumer that must build the same row outside the querier (a dispatcher
+// that streams the query constant) calls the constructor, so the two can not
+// drift.
+func TestSQLAlchemyRowConstructorIsTheOneRowBuilder(t *testing.T) {
+	none := core.DocstringConventionNone
+	emitSQL := false
+	builders.SetDocstringConfig(&none, &emitSQL, core.SQLDriverSQLAlchemy)
+	conf := &core.Config{SqlDriver: core.SQLDriverSQLAlchemy, EmitClasses: true, ModelType: core.ModelTypePydantic, IndentChar: " ", CharsPerIndentLevel: 4}
+	retType := core.PyType{Type: "GetWidgetRow"}
+
+	shapes := []struct {
+		name     string
+		query    *core.Query
+		wantCall string
+	}{
+		{"one", rowConstructorQuery(metadata.CmdOne, "SELECT 1", nil), "        return get_widget_row(row)\n"},
+		{"many select", rowConstructorQuery(metadata.CmdMany, "SELECT 1", nil), "            yield get_widget_row(row)\n"},
+		{"many stream", rowConstructorQuery(metadata.CmdMany, "SELECT 1", []string{" @stream too large"}), "            yield get_widget_row(row)\n"},
+		{"many dml", rowConstructorQuery(metadata.CmdMany, "DELETE FROM widget RETURNING *", nil), "        return [get_widget_row(row) for row in result.all()]\n"},
+	}
+	for _, shape := range shapes {
+		t.Run(shape.name, func(t *testing.T) {
+			body := builders.NewIndentStringBuilder(conf.IndentChar, conf.CharsPerIndentLevel)
+			if err := SQLAlchemyBuildPyQueryFunc(shape.query, body, nil, retType, conf); err != nil {
+				t.Fatal(err)
+			}
+			method := body.String()
+			if !strings.Contains(method, shape.wantCall) {
+				t.Fatalf("method does not call the row constructor with %q:\n%s", shape.wantCall, method)
+			}
+			if strings.Contains(method, "row[") || strings.Contains(method, "GetWidgetRow(") {
+				t.Fatalf("method builds a row itself instead of calling the constructor:\n%s", method)
+			}
+		})
+	}
+
+	body := builders.NewIndentStringBuilder(conf.IndentChar, conf.CharsPerIndentLevel)
+	SQLAlchemyBuildRowConstructor(shapes[0].query, body, retType)
+	want := "def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> GetWidgetRow:\n" +
+		"    return GetWidgetRow(\n" +
+		"        widget_id=row[0],\n" +
+		"        config=_WidgetConfig_adapter.validate_python(row[1]),\n" +
+		"        lease=LeaseToken(row[2]) if row[2] is not None else None,\n" +
+		"    )\n"
+	if got := body.String(); got != want {
+		t.Fatalf("row constructor\n got = %q\nwant = %q", got, want)
+	}
+}
+
+// TestSQLAlchemyRowConstructorScalar pins the scalar constructor: a validated
+// scalar reads through its adapter, a plain scalar returns row[0].
+func TestSQLAlchemyRowConstructorScalar(t *testing.T) {
+	validated := &core.Query{FuncName: "get_config", Cmd: metadata.CmdOne, Ret: core.QueryValue{Typ: core.PyType{
+		Type:       "WidgetConfig",
+		IsNullable: true,
+		IsOverride: true,
+		Override:   &core.Override{Validate: true},
+	}}}
+	plain := &core.Query{FuncName: "list_ids", Cmd: metadata.CmdMany, Ret: core.QueryValue{Typ: core.PyType{Type: "int"}}}
+	cases := []struct {
+		query   *core.Query
+		retType core.PyType
+		want    string
+	}{
+		{validated, core.PyType{Type: "WidgetConfig"}, "def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig | None:\n    return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None\n"},
+		{plain, core.PyType{Type: "int"}, "def list_ids_row(row: sqlalchemy.Row[typing.Any]) -> int:\n    return row[0]\n"},
+	}
+	for _, tc := range cases {
+		body := builders.NewIndentStringBuilder(" ", 4)
+		SQLAlchemyBuildRowConstructor(tc.query, body, tc.retType)
+		if got := body.String(); got != tc.want {
+			t.Fatalf("row constructor\n got = %q\nwant = %q", got, tc.want)
+		}
+	}
+}
+
+// TestSQLAlchemyRowConstructorNameCollision: without emit_classes the query
+// functions are module-level, so a query named `<Other>Row` would shadow the
+// constructor of `<Other>`. Generation stops instead.
+func TestSQLAlchemyRowConstructorNameCollision(t *testing.T) {
+	queries := []core.Query{
+		{FuncName: "get_widget", Cmd: metadata.CmdOne},
+		{FuncName: "get_widget_row", Cmd: metadata.CmdExec},
+	}
+	if err := SQLAlchemyCheckRowConstructorNames(queries, &core.Config{EmitClasses: false}); err == nil || !strings.Contains(err.Error(), "get_widget_row") {
+		t.Fatalf("want a collision error naming get_widget_row, got %v", err)
+	}
+	if err := SQLAlchemyCheckRowConstructorNames(queries, &core.Config{EmitClasses: true}); err != nil {
+		t.Fatalf("methods on AsyncQuerier can not collide with module functions, got %v", err)
 	}
 }
 

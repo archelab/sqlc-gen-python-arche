@@ -154,27 +154,40 @@ class AsyncQuerier:
         row = (await self._conn.execute(sqlalchemy.text(GET_CONFIG), {"p1": wid})).first()
         if row is None:
             return None
-        return ...
+        return get_config_row(row)
 
     # :many SELECT -> native async generator over a buffered execute
     async def list_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
         result = await self._conn.execute(sqlalchemy.text(LIST_CONFIGS))
         for row in result:
-            yield ...
+            yield list_configs_row(row)
 
     # :many SELECT marked `-- @stream` -> native async generator backed by conn.stream
     async def list_all_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
         result = await self._conn.stream(sqlalchemy.text(LIST_ALL_CONFIGS))
         async for row in result:
-            yield ...
+            yield list_all_configs_row(row)
 
     # :many over DELETE ... RETURNING -> materialized list via result.all()
     async def delete_widgets_returning_config(self, *, wid: int) -> list[WidgetConfig]:
         result = await self._conn.execute(
             sqlalchemy.text(DELETE_WIDGETS_RETURNING_CONFIG), {"p1": wid}
         )
-        return [... for row in result.all()]
+        return [delete_widgets_returning_config_row(row) for row in result.all()]
+
+
+# one module-level row constructor per row-returning query
+def delete_widgets_returning_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+    return ...
 ```
+
+The methods build no row themselves. Each `:one` / `:many` query gets one
+module-level `<func>_row(row)` constructor after the querier class, and every
+method shape calls it (`return get_config_row(row)`, `yield
+list_configs_row(row)`, `[..._row(row) for row in result.all()]`). A caller that
+fetches the row itself, for example through a query that wraps the constant and
+appends a trailing column, calls the same constructor and gets the same value:
+the constructor reads the columns by position from 0.
 
 A `:many` SELECT buffers by default: `conn.execute` fetches every row in one
 round trip, and the generator yields them from memory. `conn.stream` opens a
@@ -255,58 +268,36 @@ WidgetPayload: typing.TypeAlias = typing.Annotated[
 ### Generated code
 
 The plugin emits one cached module-level `TypeAdapter` per distinct validated
-type, and the read path calls `validate_python` on it:
+type, and the row constructors call `validate_python` on it:
 
 ```python
 _WidgetConfig_adapter: pydantic.TypeAdapter[WidgetConfig] = pydantic.TypeAdapter(WidgetConfig)
 _WidgetPayload_adapter: pydantic.TypeAdapter[WidgetPayload] = pydantic.TypeAdapter(WidgetPayload)
 
 
-class AsyncQuerier:
-    def __init__(self, conn: sqlalchemy.ext.asyncio.AsyncConnection):
-        self._conn = conn
+# non-null scalar -> fail-loud validate, no NULL guard
+def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+    return _WidgetConfig_adapter.validate_python(row[0])
 
-    # non-null scalar :one -> fail-loud validate, no NULL guard
-    async def get_config(self, *, wid: int) -> WidgetConfig | None:
-        row = (await self._conn.execute(sqlalchemy.text(GET_CONFIG), {"p1": wid})).first()
-        if row is None:
-            return None
-        return _WidgetConfig_adapter.validate_python(row[0])
 
-    # NULLABLE scalar :one -> NULL guard: a SQL NULL returns None, never raises
-    async def get_extra(self, *, wid: int) -> WidgetConfig | None:
-        row = (await self._conn.execute(sqlalchemy.text(GET_EXTRA), {"p1": wid})).first()
-        if row is None:
-            return None
-        return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None
+# NULLABLE scalar -> NULL guard: a SQL NULL returns None, never raises
+def get_extra_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig | None:
+    return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None
 
-    # discriminated union member, validated against A | B | C[D]
-    async def get_payload(self, *, wid: int) -> WidgetPayload | None:
-        row = (await self._conn.execute(sqlalchemy.text(GET_PAYLOAD), {"p1": wid})).first()
-        if row is None:
-            return None
-        return _WidgetPayload_adapter.validate_python(row[0])
 
-    # :many SELECT -> native async generator, each row validated as it is yielded
-    async def list_configs(self) -> collections.abc.AsyncIterator[WidgetConfig]:
-        result = await self._conn.execute(sqlalchemy.text(LIST_CONFIGS))
-        for row in result:
-            yield _WidgetConfig_adapter.validate_python(row[0])
-
-    # :many over DELETE ... RETURNING -> materialized list, each element validated
-    async def delete_widgets_returning_config(self, *, wid: int) -> list[WidgetConfig]:
-        result = await self._conn.execute(sqlalchemy.text(DELETE_WIDGETS_RETURNING_CONFIG), {"p1": wid})
-        return [_WidgetConfig_adapter.validate_python(row[0]) for row in result.all()]
+# discriminated union member, validated against A | B | C[D]
+def get_payload_row(row: sqlalchemy.Row[typing.Any]) -> WidgetPayload:
+    return _WidgetPayload_adapter.validate_python(row[0])
 ```
+
+The `:one`, `:many` SELECT, and `:many`-over-DML methods all read through these
+constructors, so every path validates each row.
 
 A validated column inside a struct row is validated per field, with the same
 NULL guard for nullable fields:
 
 ```python
-async def get_widget(self, *, wid: int) -> models.Widget | None:
-    row = (await self._conn.execute(sqlalchemy.text(GET_WIDGET), {"p1": wid})).first()
-    if row is None:
-        return None
+def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
     return models.Widget(
         widget_id=row[0],
         config=_WidgetConfig_adapter.validate_python(row[1]),
