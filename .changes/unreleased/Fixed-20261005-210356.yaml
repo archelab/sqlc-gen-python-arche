@@ -1,0 +1,6 @@
+kind: Fixed
+body: 'v0.5.7: a `:exec` function is typed `-> None` for every statement kind and driver. A `:exec` over a SELECT or a RETURNING of one column took the column type as its return type (`-> int`, or `-> typing.Any` for a void function such as `pg_advisory_xact_lock`) and returned nothing. Only `:one`, `:many`, `:batchone` and `:batchmany` now get a result type from the columns.'
+time: 2026-10-05T21:03:56.000000Z
+custom:
+    Author: pedro-pscunha
+    PR: "29"

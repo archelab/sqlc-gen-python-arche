@@ -17,6 +17,9 @@ UPDATE file_attachment
 SET expires_at = sqlc.arg(expires_at)::timestamptz
 WHERE file_attachment_id = sqlc.arg(file_attachment_id)::bigint;
 
+-- name: LockFileAttachment :exec
+SELECT pg_advisory_xact_lock(sqlc.arg(file_attachment_id)::bigint);
+
 -- name: InsertFileAttachment :one
 INSERT INTO file_attachment (
     upload_id,
