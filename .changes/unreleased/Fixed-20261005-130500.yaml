@@ -1,0 +1,6 @@
+kind: Fixed
+body: 'v0.5.6: text from SQL reaches Python as written. Every backslash of a query is doubled in the query constant and a `"""` is escaped; enum labels, enum and table comments, column comments and the asyncpg copy table name use the same encoding. The SQLAlchemy driver stops generation for a `$N` directly after a backslash or a colon, and a scalar enum return or parameter now imports `models`.'
+time: 2026-10-05T13:05:00.000000Z
+custom:
+    Author: pedro-pscunha
+    PR: "28"
