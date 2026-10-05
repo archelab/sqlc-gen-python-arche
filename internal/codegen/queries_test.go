@@ -28,6 +28,10 @@ SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
 SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
 """
 `,
+		core.SQLDriverAioSQLite: `Q: typing.Final[str] = """-- name: Q :one
+SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
+"""
+`,
 	}
 	for driverType, want := range cases {
 		t.Run(driverType.String(), func(t *testing.T) {

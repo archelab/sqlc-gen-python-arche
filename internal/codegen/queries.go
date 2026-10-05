@@ -119,7 +119,8 @@ func (dr *Driver) buildQueryHeader(query *core.Query, body *builders.IndentStrin
 	// Each rewrite returns the run-time text; PyTripleQuotedText then encodes
 	// it for the Python string, so a backslash in the SQL reaches the driver
 	// unchanged.
-	body.WriteLine(fmt.Sprintf(`%s: typing.Final[str] = """%s`, query.ConstantName, core.PyTripleQuotedText("-- name: "+query.MethodName+" "+dr.rewriteHeaderVerb(query.Cmd))))
+	header := "-- name: " + query.MethodName + " " + dr.rewriteHeaderVerb(query.Cmd)
+	body.WriteLine(fmt.Sprintf(`%s: typing.Final[str] = """%s`, query.ConstantName, core.PyTripleQuotedText(header)))
 	body.WriteLine(core.PyTripleQuotedText(dr.rewriteSQL(query.SQL)))
 	body.WriteLine(`"""`)
 }

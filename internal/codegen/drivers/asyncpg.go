@@ -105,7 +105,7 @@ func AsyncpgBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBuild
 		body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("(%s)", params))
 		body.WriteIndentedLine(indentLevel+2, fmt.Sprintf("for param in %s", query.Args[0].Name))
 		body.WriteIndentedLine(indentLevel+1, "]")
-		body.WriteIndentedLine(indentLevel+1, fmt.Sprintf(`r = await %s.copy_records_to_table("%s", columns=[%s], records=records)`, conn, query.Table.Name, columns))
+		body.WriteIndentedLine(indentLevel+1, fmt.Sprintf(`r = await %s.copy_records_to_table(%s, columns=[%s], records=records)`, conn, core.PyStringLiteral(query.Table.Name), columns))
 		if conf.Speedups {
 			body.WriteIndentedLine(indentLevel+1, "return int(n) if (n := r.split()[-1]).isdigit() else 0")
 		} else {

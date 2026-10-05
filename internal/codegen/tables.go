@@ -101,7 +101,7 @@ func pyFieldType(col core.Column, stripModelsPrefix bool) string {
 func buildPydanticTable(table *core.Table, body *builders.IndentStringBuilder, stripModelsPrefix bool) {
 	body.WriteLine(fmt.Sprintf("class %s(pydantic.BaseModel):", table.Name))
 	if table.Comment != "" {
-		body.WriteIndentedLine(1, fmt.Sprintf(`"""%s"""`, table.Comment))
+		body.WriteIndentedLine(1, `"""`+core.PyTripleQuotedText(table.Comment)+`"""`)
 	}
 	// When any field name is a true Python keyword it is escaped to
 	// `<name>_` with the alias carried via the ANNOTATED pattern
@@ -143,7 +143,9 @@ func buildPydanticTable(table *core.Table, body *builders.IndentStringBuilder, s
 	}
 	for _, col := range table.Columns {
 		if col.Comment != "" {
-			body.WriteIndentedLine(1, "# "+col.Comment)
+			for _, line := range core.PyCommentLines(col.Comment) {
+				body.WriteIndentedLine(1, "# "+line)
+			}
 		}
 		type_ := pyFieldType(col, stripModelsPrefix)
 		fieldName, escaped := core.EscapeFieldName(col.Name)

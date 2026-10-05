@@ -39,13 +39,14 @@ import pytest
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
+from test.driver_sqlalchemy.sql_escape.gen import models
 from test.driver_sqlalchemy.sql_escape.gen import queries
 
 if typing.TYPE_CHECKING:
     import asyncpg
 
 _QUERIES_SQL = pathlib.Path(__file__).parent / "queries.sql"
-_HEADER = re.compile(r"-- name: (\w+) :one$")
+_HEADER = re.compile(r"-- name: (\w+) :\w+$")
 
 _EXPECTED: dict[str, tuple[object, ...]] = {
     "NewlineEscapes": ("a\nb", "a\\nb"),
@@ -59,14 +60,14 @@ _EXPECTED: dict[str, tuple[object, ...]] = {
 
 
 def _source_sql() -> dict[str, str]:
-    # The SQL of each `-- name:` block as written: full-line comments and the
-    # final `;` dropped, every backslash kept.
+    # The SQL of each `-- name:` block as written: the full-line comments sqlc
+    # drops (a `--` at column 0) and the final `;` dropped, every backslash kept.
     blocks: dict[str, list[str]] = {}
     lines: list[str] | None = None
     for line in _QUERIES_SQL.read_text(encoding="utf-8").splitlines():
         if header := _HEADER.match(line):
             lines = blocks.setdefault(header.group(1), [])
-        elif lines is not None and not line.lstrip().startswith("--"):
+        elif lines is not None and not line.startswith("--"):
             lines.append(line)
     return {name: "\n".join(body).strip().removesuffix(";") for name, body in blocks.items()}
 
@@ -115,3 +116,21 @@ async def test_literal_colon_and_bind_round_trip(
     querier = queries.AsyncQuerier(case_conn)
     assert await querier.count_by_literal_colon(label_row_id=1) == 1
     assert await querier.count_by_literal_colon(label_row_id=2) == 0
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_schema_text_reaches_python_as_written(
+    case_conn: sqlalchemy.ext.asyncio.AsyncConnection,
+) -> None:
+    # The enum labels, the type and table comments (docstrings) and the
+    # two-line column comment (a # block) come from schema.sql. The labels must
+    # equal what Postgres returns, or a read of a stored label fails.
+    raw = await case_conn.get_raw_connection()
+    driver = typing.cast("asyncpg.Connection[asyncpg.Record]", raw.driver_connection)
+    direct = await driver.fetchval("SELECT array_agg(m::text) FROM unnest(enum_range(NULL::escape_mood)) AS m")
+    expected = ["plain", "back\\slash", 'say "hi"']
+    assert list(direct) == expected
+    assert [member.value for member in models.EscapeMood] == expected
+
+    assert models.EscapeMood.__doc__ == 'a label can hold "quotes" and \\ backslashes'
+    assert models.LabelRow.__doc__ == 'rows with a "quoted" end"'

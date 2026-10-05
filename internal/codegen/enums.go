@@ -26,7 +26,7 @@ import (
 func buildPyEnum(enum core.Enum, body *builders.IndentStringBuilder) error {
 	body.WriteLine(fmt.Sprintf("class %s(enum.StrEnum):", enum.Name))
 	if enum.Comment != "" {
-		body.WriteIndentedLine(1, fmt.Sprintf(`"""%s"""`, enum.Comment))
+		body.WriteIndentedLine(1, `"""`+core.PyTripleQuotedText(enum.Comment)+`"""`)
 	}
 	if len(enum.Constants) == 0 {
 		body.WriteIndentedLine(1, "pass")
@@ -50,7 +50,7 @@ func buildPyEnum(enum core.Enum, body *builders.IndentStringBuilder) error {
 			)
 		}
 		seen[member] = c.Value
-		body.WriteIndentedLine(1, fmt.Sprintf(`%s = "%s"`, member, c.Value))
+		body.WriteIndentedLine(1, member+" = "+core.PyStringLiteral(c.Value))
 	}
 	return nil
 }

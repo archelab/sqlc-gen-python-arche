@@ -5,27 +5,44 @@ import (
 	"testing"
 )
 
-// readPyTripleQuoted reads encoded the way Python reads the inside of a `"""`
-// string that is not raw, for the two escapes PyTripleQuotedText writes. It
-// fails on any other escape and on a `"""` that would end the string early.
+// readPyTripleQuoted reads `"""` + encoded + `"""` the way Python reads a `"""`
+// string that is not raw, for the escapes PyTripleQuotedText writes. It fails
+// on any other escape, on a CR or NUL in the source, and on a `"""` that ends
+// the string before the closing delimiter.
 func readPyTripleQuoted(t *testing.T, encoded string) string {
 	t.Helper()
+	source := encoded + `"""`
 	var out strings.Builder
-	for i := 0; i < len(encoded); i++ {
-		switch c := encoded[i]; {
+	for i := 0; i < len(source); i++ {
+		switch c := source[i]; {
+		case c == '\r' || c == 0:
+			t.Fatalf("%q: Python can not keep the byte %q in source at %d", encoded, c, i)
 		case c == '\\':
-			if i+1 == len(encoded) || (encoded[i+1] != '\\' && encoded[i+1] != '"') {
+			switch {
+			case strings.HasPrefix(source[i:], `\\`):
+				out.WriteByte('\\')
+			case strings.HasPrefix(source[i:], `\"`):
+				out.WriteByte('"')
+			case strings.HasPrefix(source[i:], `\r`):
+				out.WriteByte('\r')
+			case strings.HasPrefix(source[i:], `\x00`):
+				out.WriteByte(0)
+				i += 2
+			default:
 				t.Fatalf("%q: a backslash that Python reads as another escape at %d", encoded, i)
 			}
 			i++
-			out.WriteByte(encoded[i])
-		case strings.HasPrefix(encoded[i:], `"""`):
-			t.Fatalf("%q: an unescaped \"\"\" ends the string at %d", encoded, i)
+		case strings.HasPrefix(source[i:], `"""`):
+			if i != len(encoded) {
+				t.Fatalf("%q: an unescaped \"\"\" ends the string at %d", encoded, i)
+			}
+			return out.String()
 		default:
 			out.WriteByte(c)
 		}
 	}
-	return out.String()
+	t.Fatalf("%q: the closing \"\"\" was consumed", encoded)
+	return ""
 }
 
 func TestPyTripleQuotedText(t *testing.T) {
@@ -36,10 +53,14 @@ func TestPyTripleQuotedText(t *testing.T) {
 		`'^(4|5|6)\.'`:        `'^(4|5|6)\\.'`,
 		`ESCAPE '\'`:          `ESCAPE '\\'`,
 		"a line end \\\nnext": "a line end \\\\\nnext",
+		"a\rb":                `a\rb`,
+		"a\x00b":              `a\x00b`,
 		`"""`:                 `""\"`,
 		`""""""`:              `""\"""\"`,
 		`\"""`:                `\\""\"`,
-		`"a""b"`:              `"a""b"`,
+		`"a""b"`:              `"a""b\"`,
+		`say "hi"`:            `say "hi\"`,
+		`""`:                  `"\"`,
 	}
 	for in, want := range cases {
 		got := PyTripleQuotedText(in)
@@ -52,13 +73,13 @@ func TestPyTripleQuotedText(t *testing.T) {
 	}
 }
 
-// TestPyTripleQuotedTextReadsBackExactly checks every string of up to 7
-// characters over the characters that matter: Python must read the encoded
-// text back as the input, and no `"""` may end the string early.
+// TestPyTripleQuotedTextReadsBackExactly checks every string of up to 6
+// characters over the characters that matter, with the closing `"""` right
+// after it: Python must read the encoded text back as the input.
 func TestPyTripleQuotedTextReadsBackExactly(t *testing.T) {
-	alphabet := []string{`\`, `"`, "n", ":", "\n"}
+	alphabet := []string{`\`, `"`, "n", ":", "\n", "\r", "\x00"}
 	inputs := []string{""}
-	for length := 1; length <= 7; length++ {
+	for length := 1; length <= 6; length++ {
 		next := make([]string, 0, len(inputs)*len(alphabet))
 		for _, prefix := range inputs {
 			for _, c := range alphabet {
@@ -71,5 +92,28 @@ func TestPyTripleQuotedTextReadsBackExactly(t *testing.T) {
 			}
 		}
 		inputs = next
+	}
+}
+
+func TestPyStringLiteral(t *testing.T) {
+	cases := map[string]string{
+		"pending":    `"pending"`,
+		`back\slash`: `"back\\slash"`,
+		`say "hi"`:   `"say \"hi\""`,
+		"two\nlines": `"two\nlines"`,
+		"é":          `"é"`,
+	}
+	for in, want := range cases {
+		if got := PyStringLiteral(in); got != want {
+			t.Errorf("PyStringLiteral(%q) = %s, want %s", in, got, want)
+		}
+	}
+}
+
+func TestPyCommentLines(t *testing.T) {
+	got := PyCommentLines("one\ntwo\r\nthree\rfour")
+	want := []string{"one", "two", "three", "four"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("PyCommentLines = %q, want %q", got, want)
 	}
 }

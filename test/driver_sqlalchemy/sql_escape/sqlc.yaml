@@ -3,14 +3,16 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 53c815beefcc741ffa478c27de6bddb8d60a3da7fce1fb7da372cd1f88acaf57
+      sha256: 63c6a4144429b4e346d768af767362ff6ce46ae49b4a9eb8122ee9b81228d0e5
 sql:
   # MAJOR-1 escape proof: the body rewrite escapes EVERY colon (cast AND a
   # non-cast literal colon in 'a:b'), then rewrites $N -> :pN. The golden pins
   # `count(*)\\:\\:bigint`, `'a\\:b'`, `= :p1\\:\\:bigint`, and the header
   # `\\:one`. v0.5.6 backslash proof: every backslash of the SQL is doubled in
   # the constant (`E'a\\nb'`, `'\\1\\1'`, `ESCAPE '\\'`), and the live test
-  # compares each query with its queries.sql text run directly.
+  # compares each query with its queries.sql text run directly. schema.sql adds
+  # the schema text: enum labels with a backslash and quotes, docstrings that
+  # end in a quote, and a two-line column comment.
   - schema: schema.sql
     queries: queries.sql
     engine: postgresql

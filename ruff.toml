@@ -97,6 +97,13 @@ ignore = [
               # matching the reference models.py Optional[Any]. Any in codegen is intended.
     "TC003", # Move stdlib import into type-checking block (codegen placement)
     "A002", # Argument `id` shadows a builtin (the generator keeps raw `id` params)
+    "D301", # Backslash in a docstring: a schema comment is copied as written, with
+            # each backslash escaped (a raw docstring can not hold a trailing
+            # backslash or a `"""`)
+    "D400", # First docstring line should end with a period: the text is the schema
+            # comment as written
+    "Q003", # Avoidable escaped quote: an enum label is written with double quotes
+            # and escapes, whatever it holds
 ]
 # Hand-written typed-JSON shape fixtures imported BY the generated jsonb_typed
 # code (e.g. test/driver_sqlalchemy/jsonb_typed/shapes.py). They are pydantic

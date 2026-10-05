@@ -6,6 +6,7 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/plugin"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -75,21 +76,61 @@ func SQLToPyFileName(s string) string {
 	return strings.ReplaceAll(s, ".sql", ".py")
 }
 
+// The three functions below are the only encoding steps between text that
+// comes from SQL (query text, schema comments, enum labels, table names) and
+// Python source. A driver rewrite returns the text the driver must receive at
+// run time (SQLAlchemy's `\:` literal colon has ONE backslash), and the
+// emission site encodes it here.
+
 // PyTripleQuotedText encodes s for the inside of a Python `"""` string that is
-// not raw, so the string reads back as exactly s. Python reads a backslash as
-// an escape (`\n`, `\u001f`, `\1` change the text, `\.` warns and will fail at
-// import, a backslash at a line end joins two lines), so every backslash is
-// doubled. A `"""` would end the string, so the third quote of each run is
-// escaped. Backslashes go first: the quote escape adds a backslash that must
-// stay single. The caller opens the string before s and closes it after a
-// newline, so a quote at either end of s can not join the delimiters.
-//
-// This is the only encoding step between SQL text and Python source: a driver
-// rewrite returns the text the driver must receive at run time (SQLAlchemy's
-// `\:` literal colon has ONE backslash), and the emission site encodes it here.
+// not raw, so the string reads back as exactly s, whatever surrounds it.
+// Python reads a backslash as an escape (`\n`, `\u001f`, `\1` change the text,
+// `\.` warns and will fail at import, a backslash at a line end joins two
+// lines), so every backslash is doubled. Python reads a CR in source as a line
+// end and refuses a NUL, so both are written as escapes. A `"""` would end the
+// string, so the third quote of each run is escaped, and so is a quote at the
+// end of s, which the closing `"""` would otherwise join.
 func PyTripleQuotedText(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	return strings.ReplaceAll(s, `"""`, `""\"`)
+	var b strings.Builder
+	quotes := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '"' {
+			quotes++
+		} else {
+			quotes = 0
+		}
+		switch {
+		case c == '\\':
+			b.WriteString(`\\`)
+		case c == '\r':
+			b.WriteString(`\r`)
+		case c == 0:
+			b.WriteString(`\x00`)
+		case c == '"' && (quotes == 3 || i == len(s)-1):
+			b.WriteString(`\"`)
+			quotes = 0
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
+}
+
+// PyStringLiteral returns s as a complete double-quoted Python string literal.
+// For valid UTF-8 (all text sqlc passes), the escapes strconv.Quote writes
+// (`\\`, `\"`, `\n`, `\r`, `\t`, `\a`, `\b`, `\f`, `\v`, `\xhh`, `\uhhhh`,
+// `\Uhhhhhhhh`) mean the same in Python, so Python reads back exactly s.
+func PyStringLiteral(s string) string {
+	return strconv.Quote(s)
+}
+
+// PyCommentLines splits s into the lines of a `#` comment block. Python ends a
+// comment at a LF, a CRLF or a lone CR, so a comment line that held any of them
+// would put the rest of the text into code.
+func PyCommentLines(s string) []string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.Split(strings.ReplaceAll(s, "\r", "\n"), "\n")
 }
 
 func SplitLines(s string) []string {

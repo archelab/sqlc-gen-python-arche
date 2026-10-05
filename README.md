@@ -76,10 +76,12 @@ runtime-only bugs the static gates miss.
   `options` block fail loudly and name the offending key.
 - A gen-time guard reports struct-to-struct name collisions instead of emitting
   two classes with the same name.
-- Every backslash of a query reaches the database as written, for every driver.
-  The query constant is a Python `"""` string that is not raw, so the generator
-  doubles each backslash and escapes a `"""` in the SQL. Before v0.5.6, Python
-  read `\n`, `\1` or `\'` in the SQL as escapes and ran other SQL.
+- Text from SQL reaches Python as written, for every driver. The query
+  constant is a Python `"""` string that is not raw, so the generator doubles
+  each backslash, escapes a `"""`, and writes a CR or NUL as an escape. Before
+  v0.5.6, Python read `\n`, `\1` or `\'` in the SQL as escapes and ran other
+  SQL. The same encoding now applies to enum labels, to enum and table comments
+  (docstrings) and to column comments (one `#` line per comment line).
 
 ### Inherited from the upstream plugin
 

@@ -3,12 +3,24 @@
 #   sqlc v1.31.1
 #   sqlc-gen-python-arche v0.5.6
 __all__: tuple[str, ...] = (
+    "EscapeMood",
     "LabelRow",
 )
 
+import enum
 import pydantic
 
 
+class EscapeMood(enum.StrEnum):
+    """a label can hold "quotes" and \\ backslashes"""
+    PLAIN = "plain"
+    BACKSLASH = "back\\slash"
+    SAYHI = "say \"hi\""
+
+
 class LabelRow(pydantic.BaseModel):
+    """rows with a "quoted" end\""""
     label_row_id: int
+    # first line
+    # second line
     label: str
