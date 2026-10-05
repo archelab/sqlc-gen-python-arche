@@ -36,6 +36,14 @@ ASYNCPG_PATH = pathlib.Path(__file__).parent / "driver_asyncpg"
 AIOSQLITE_PATH = pathlib.Path(__file__).parent / "driver_aiosqlite"
 SQLITE3_PATH = pathlib.Path(__file__).parent / "driver_sqlite3"
 
+# The schemas this session used. The session-end cleanup deletes only from
+# those: a run of a SQLAlchemy case directory never creates the asyncpg or
+# sqlite tables, and a DELETE on a missing table replaced the run's own result
+# with UndefinedTableError (also after a collection error, which hid the real
+# one). The sqlite3 and aiosqlite fixtures create the same three tables in the
+# same --sqlite-db file, so both mark "sqlite".
+_SCHEMAS_IN_USE = pytest.StashKey[set[str]]()
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
@@ -50,6 +58,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default="sqlite.db",
         help="the sqlite db uri needed to connect to the db",
     )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.stash[_SCHEMAS_IN_USE] = set()
 
 
 def get_dsn(config: pytest.Config) -> str:
@@ -76,6 +88,7 @@ async def asyncpg_conn(
     conn = await asyncpg.connect(dsn)
 
     await conn.execute((ASYNCPG_PATH / "schema.sql").read_text())
+    request.config.stash[_SCHEMAS_IN_USE].add("asyncpg")
     yield conn
     await conn.execute("""
         DELETE FROM test_postgres_types;
@@ -93,6 +106,7 @@ def sqlite3_conn(
     conn = sqlite3.connect(dsn, detect_types=sqlite3.PARSE_DECLTYPES)
     conn.executescript((SQLITE3_PATH / "schema.sql").read_text())
     conn.commit()
+    request.config.stash[_SCHEMAS_IN_USE].add("sqlite")
     yield conn
 
     conn.executescript("""DELETE FROM test_sqlite_types;DELETE FROM test_inner_sqlite_types;""")
@@ -108,6 +122,7 @@ async def aiosqlite_conn(
     conn = await aiosqlite.connect(dsn, detect_types=sqlite3.PARSE_DECLTYPES)
     await conn.executescript((AIOSQLITE_PATH / "schema.sql").read_text())
     await conn.commit()
+    request.config.stash[_SCHEMAS_IN_USE].add("sqlite")
     yield conn
 
     await conn.executescript(
@@ -142,10 +157,10 @@ async def aiosqlite_delete_all(dsn: str) -> None:
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: pytest.ExitCode) -> None:  # noqa: ARG001
     async def _delete_all(conf: pytest.Config) -> None:
-        postgres_dsn = get_dsn(conf)
-        await asyncpg_delete_all(postgres_dsn)
-
-        aiosqlite_dsn = get_sqlite_dsn(conf)
-        await aiosqlite_delete_all(aiosqlite_dsn)
+        in_use = conf.stash[_SCHEMAS_IN_USE]
+        if "asyncpg" in in_use:
+            await asyncpg_delete_all(get_dsn(conf))
+        if "sqlite" in in_use:
+            await aiosqlite_delete_all(get_sqlite_dsn(conf))
 
     asyncio.run(_delete_all(session.config))
