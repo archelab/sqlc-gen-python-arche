@@ -118,10 +118,11 @@ func (dr *Driver) buildQueryHeader(query *core.Query, body *builders.IndentStrin
 	// docstring echo routes through NEITHER hook and keeps canonical `$N`.
 	// Each rewrite returns the run-time text; PyTripleQuotedText then encodes
 	// it for the Python string, so a backslash in the SQL reaches the driver
-	// unchanged.
+	// unchanged. Each line is encoded with its line end: the closing """ is on
+	// its own line, so a quote at the end of a line needs no escape.
 	header := "-- name: " + query.MethodName + " " + dr.rewriteHeaderVerb(query.Cmd)
-	body.WriteLine(fmt.Sprintf(`%s: typing.Final[str] = """%s`, query.ConstantName, core.PyTripleQuotedText(header)))
-	body.WriteLine(core.PyTripleQuotedText(dr.rewriteSQL(query.SQL)))
+	body.WriteString(fmt.Sprintf(`%s: typing.Final[str] = """%s`, query.ConstantName, core.PyTripleQuotedText(header+"\n")))
+	body.WriteString(core.PyTripleQuotedText(dr.rewriteSQL(query.SQL) + "\n"))
 	body.WriteLine(`"""`)
 }
 

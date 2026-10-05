@@ -15,10 +15,10 @@ func TestQueryDocstringSQLEchoKeepsEveryBackslash(t *testing.T) {
 	convention, emitSQL := core.DocstringConventionGoogle, true
 	SetDocstringConfig(&convention, &emitSQL, core.SQLDriverAsyncpg)
 	b := NewIndentStringBuilder("    ", 1)
-	query := &core.Query{MethodName: "Q", Cmd: metadata.CmdExec, SQL: "SELECT E'\\n', '\"\"\"'\nWHERE x ~ '\\.'"}
+	query := &core.Query{MethodName: "Q", Cmd: metadata.CmdExec, SQL: "SELECT E'\\n', '\"\"\"'\nWHERE x ~ '\\.'\nORDER BY 1 COLLATE \"C\""}
 	b.WriteQueryFunctionDocstring(1, query, "", nil, core.PyType{})
 	got := b.String()
-	for _, want := range []string{`    SELECT E'\\n', '""\"'` + "\n", `    WHERE x ~ '\\.'` + "\n"} {
+	for _, want := range []string{`    SELECT E'\\n', '""\"'` + "\n", `    WHERE x ~ '\\.'` + "\n", `    ORDER BY 1 COLLATE "C"` + "\n"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in:\n%s", want, got)
 		}

@@ -14,22 +14,22 @@ import (
 // backslashes AFTER a rewrite that already wrote `\\:` gives `\\\\:` and breaks
 // every cast; no doubling at all leaves `\n` a newline.
 func TestBuildQueryHeaderKeepsEveryBackslash(t *testing.T) {
-	sql := `SELECT E'\n'::text AS nl, '^(4|5|6)\.' AS re, '"""' AS q, $1::text AS p`
+	sql := `SELECT E'\n'::text AS nl, '^(4|5|6)\.' AS re, '"""' AS q, $1::text AS p ORDER BY 1 COLLATE "C"`
 	cases := map[core.SQLDriverType]string{
 		core.SQLDriverSQLAlchemy: `Q: typing.Final[str] = """-- name: Q \\:one
-SELECT E'\\n'\\:\\:text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, :p1\\:\\:text AS p
+SELECT E'\\n'\\:\\:text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, :p1\\:\\:text AS p ORDER BY 1 COLLATE "C"
 """
 `,
 		core.SQLDriverAsyncpg: `Q: typing.Final[str] = """-- name: Q :one
-SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
+SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p ORDER BY 1 COLLATE "C"
 """
 `,
 		core.SQLDriverSQLite: `Q: typing.Final[str] = """-- name: Q :one
-SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
+SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p ORDER BY 1 COLLATE "C"
 """
 `,
 		core.SQLDriverAioSQLite: `Q: typing.Final[str] = """-- name: Q :one
-SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p
+SELECT E'\\n'::text AS nl, '^(4|5|6)\\.' AS re, '""\"' AS q, $1::text AS p ORDER BY 1 COLLATE "C"
 """
 `,
 	}

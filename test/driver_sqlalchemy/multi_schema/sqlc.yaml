@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 09322ffa1ff882fcde8670c11e301c2269ae80326c77630e719aab6521d6570d
+      sha256: f8fe5735124d3c3e9dcf761a04a33e01e80cd20689fb6b043f18f1351a1f86de
 sql:
   # P-21 cross-package multi-file schema list + multi-dir query glob: `schema` is
   # a LIST of two files (mirrors app_billing listing app_db migrations by
