@@ -131,6 +131,8 @@ async def test_schema_text_reaches_python_as_written(
     expected = ["plain", "back\\slash", 'say "hi"']
     assert list(direct) == expected
     assert [member.value for member in models.EscapeMood] == expected
+    querier = queries.AsyncQuerier(case_conn)
+    assert [str(mood) async for mood in querier.mood_labels()] == expected
 
     assert models.EscapeMood.__doc__ == 'a label can hold "quotes" and \\ backslashes'
     assert models.LabelRow.__doc__ == 'rows with a "quoted" end"'

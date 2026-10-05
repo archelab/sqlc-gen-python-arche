@@ -47,3 +47,6 @@ SELECT 'a\:b'::text AS backslash_colon;
 -- name: TripleQuote :one
 SELECT '"""'::text AS triple_quote,
        '\"""'::text AS backslash_triple_quote;
+
+-- name: MoodLabels :many
+SELECT unnest(enum_range(NULL::escape_mood))::escape_mood AS mood;

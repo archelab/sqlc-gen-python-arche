@@ -487,10 +487,11 @@ func (i *Importer) queryFieldTypeModules() map[string]struct{} {
 // queriesReferenceModels reports whether any query in the file emits a
 // `models.X` reference, requiring the `from <package> import models` import. A
 // reference arises from (1) a Ret struct that lives in models.py (IsStruct and
-// NOT emitted inline), or (2) an embedded sub-struct: a column inside an
+// NOT emitted inline), (2) an embedded sub-struct: a column inside an
 // inline-emitted Row/Params struct whose resolved type carries the `models.`
-// prefix (set for sqlc.embed columns at builders.go). Mirrors exactly the two
-// places the body emitter writes `models.`.
+// prefix (set for sqlc.embed columns at builders.go), or (3) a scalar return or
+// argument of an enum type (`models.X`). Mirrors exactly the places the body
+// emitter writes `models.`.
 func (i *Importer) queriesReferenceModels() bool {
 	columnsReferenceModels := func(cols []Column) bool {
 		for _, c := range cols {
@@ -502,7 +503,7 @@ func (i *Importer) queriesReferenceModels() bool {
 	}
 	structReferencesModels := func(qv QueryValue) bool {
 		if !qv.IsStruct() {
-			return false
+			return strings.HasPrefix(qv.Typ.Type, "models.")
 		}
 		if !qv.EmitStruct() {
 			// A struct return NOT emitted inline resolves to `models.X`.

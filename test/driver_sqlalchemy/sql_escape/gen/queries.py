@@ -13,17 +13,21 @@ __all__: tuple[str, ...] = (
     "backslash_before_colon_row",
     "count_by_literal_colon_row",
     "like_escaped_percent_row",
+    "mood_labels_row",
     "newline_escapes_row",
     "regex_dot_row",
     "triple_quote_row",
     "unit_separator_escapes_row",
 )
 
+import collections.abc
 import pydantic
 import typing
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
+
+from test.driver_sqlalchemy.sql_escape.gen import models
 
 
 class LikeEscapedPercentRow(pydantic.BaseModel):
@@ -72,6 +76,10 @@ WHERE label = 'a\\:b'
 LIKE_ESCAPED_PERCENT: typing.Final[str] = """-- name: LikeEscapedPercent \\:one
 SELECT ('a%b' LIKE 'a\\%b' ESCAPE '\\')\\:\\:bool AS escaped_percent_matches_percent,
        ('axb' LIKE 'a\\%b' ESCAPE '\\')\\:\\:bool AS escaped_percent_rejects_other
+"""
+
+MOOD_LABELS: typing.Final[str] = """-- name: MoodLabels \\:many
+SELECT unnest(enum_range(NULL\\:\\:escape_mood))\\:\\:escape_mood AS mood
 """
 
 NEWLINE_ESCAPES: typing.Final[str] = """-- name: NewlineEscapes \\:one
@@ -126,6 +134,11 @@ class AsyncQuerier:
             return None
         return like_escaped_percent_row(row)
 
+    async def mood_labels(self) -> collections.abc.AsyncIterator[models.EscapeMood]:
+        result = await self._conn.execute(sqlalchemy.text(MOOD_LABELS))
+        for row in result:
+            yield mood_labels_row(row)
+
     async def newline_escapes(self) -> NewlineEscapesRow | None:
         row = (await self._conn.execute(sqlalchemy.text(NEWLINE_ESCAPES))).first()
         if row is None:
@@ -168,6 +181,10 @@ def like_escaped_percent_row(row: sqlalchemy.Row[typing.Any]) -> LikeEscapedPerc
         escaped_percent_matches_percent=row[0],
         escaped_percent_rejects_other=row[1],
     )
+
+
+def mood_labels_row(row: sqlalchemy.Row[typing.Any]) -> models.EscapeMood:
+    return row[0]
 
 
 def newline_escapes_row(row: sqlalchemy.Row[typing.Any]) -> NewlineEscapesRow:
