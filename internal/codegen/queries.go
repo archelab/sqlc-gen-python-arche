@@ -116,8 +116,11 @@ func (dr *Driver) buildQueryHeader(query *core.Query, body *builders.IndentStrin
 	// executable SQL body are rewritten independently; the default is identity
 	// for both (asyncpg/sqlite keep raw `$N` + unescaped verb). The human
 	// docstring echo routes through NEITHER hook and keeps canonical `$N`.
-	body.WriteLine(fmt.Sprintf(`%s: typing.Final[str] = """-- name: %s %s`, query.ConstantName, query.MethodName, dr.rewriteHeaderVerb(query.Cmd)))
-	body.WriteLine(dr.rewriteSQL(query.SQL))
+	// Each rewrite returns the run-time text; PyTripleQuotedText then encodes
+	// it for the Python string, so a backslash in the SQL reaches the driver
+	// unchanged.
+	body.WriteLine(fmt.Sprintf(`%s: typing.Final[str] = """%s`, query.ConstantName, core.PyTripleQuotedText("-- name: "+query.MethodName+" "+dr.rewriteHeaderVerb(query.Cmd))))
+	body.WriteLine(core.PyTripleQuotedText(dr.rewriteSQL(query.SQL)))
 	body.WriteLine(`"""`)
 }
 

@@ -75,6 +75,23 @@ func SQLToPyFileName(s string) string {
 	return strings.ReplaceAll(s, ".sql", ".py")
 }
 
+// PyTripleQuotedText encodes s for the inside of a Python `"""` string that is
+// not raw, so the string reads back as exactly s. Python reads a backslash as
+// an escape (`\n`, `\u001f`, `\1` change the text, `\.` warns and will fail at
+// import, a backslash at a line end joins two lines), so every backslash is
+// doubled. A `"""` would end the string, so the third quote of each run is
+// escaped. Backslashes go first: the quote escape adds a backslash that must
+// stay single. The caller opens the string before s and closes it after a
+// newline, so a quote at either end of s can not join the delimiters.
+//
+// This is the only encoding step between SQL text and Python source: a driver
+// rewrite returns the text the driver must receive at run time (SQLAlchemy's
+// `\:` literal colon has ONE backslash), and the emission site encodes it here.
+func PyTripleQuotedText(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	return strings.ReplaceAll(s, `"""`, `""\"`)
+}
+
 func SplitLines(s string) []string {
 	var lines []string
 	sc := bufio.NewScanner(strings.NewReader(s))

@@ -19,7 +19,9 @@ and a committed golden output tree. Cases to pin:
 - the four verb shapes (`:one`, `:many` SELECT, `:many` DML+RETURNING, `:exec`,
   `:execrows`);
 - the `\:<verb>` header escape and the `:pN` + `\:\:` body escape (incl. a
-  **non-cast** literal colon, per REVIEW-CORRECTIONS MAJOR-1);
+  **non-cast** literal colon, per REVIEW-CORRECTIONS MAJOR-1), and every
+  backslash of the SQL kept as written (`sql_escape`, live: each query returns
+  what its `queries.sql` text returns when run directly);
 - keyword-only vs `Params`-bundling, including the 2-param and at-limit
   boundary;
 - scalar `:one`;

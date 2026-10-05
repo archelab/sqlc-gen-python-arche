@@ -9,11 +9,12 @@ import (
 	"github.com/sqlc-dev/plugin-sdk-go/metadata"
 )
 
-// TestSQLAlchemyRewriteSQL pins the escape rule: escape EVERY colon to `\\:`
+// TestSQLAlchemyRewriteSQL pins the escape rule: escape EVERY colon to `\:`
 // first (cast AND non-cast literal colons), THEN rewrite `$N` -> `:pN`. The
 // order is load-bearing — escaping first ensures the inserted `:pN` bind
-// markers are not themselves escaped. The emitted text carries two backslash
-// characters before each escaped colon (Go raw string `\\:`).
+// markers are not themselves escaped. The rewrite returns the RUN-TIME text,
+// one backslash before each escaped colon; the emission site doubles it for
+// the Python string (TestBuildQueryHeaderKeepsEveryBackslash).
 func TestSQLAlchemyRewriteSQL(t *testing.T) {
 	cases := []struct {
 		name string
@@ -21,14 +22,14 @@ func TestSQLAlchemyRewriteSQL(t *testing.T) {
 		want string
 	}{
 		{
-			name: "cast becomes double-escaped",
+			name: "cast escapes both colons",
 			in:   "SELECT count(*)::bigint",
-			want: `SELECT count(*)\\:\\:bigint`,
+			want: `SELECT count(*)\:\:bigint`,
 		},
 		{
 			name: "non-cast literal colon also escapes",
 			in:   "WHERE label = 'a:b'",
-			want: `WHERE label = 'a\\:b'`,
+			want: `WHERE label = 'a\:b'`,
 		},
 		{
 			name: "placeholder becomes bind, inserted colon NOT escaped",
@@ -38,17 +39,22 @@ func TestSQLAlchemyRewriteSQL(t *testing.T) {
 		{
 			name: "placeholder with cast: bind unescaped, cast escaped",
 			in:   "WHERE extraction_id = $1::text",
-			want: `WHERE extraction_id = :p1\\:\\:text`,
+			want: `WHERE extraction_id = :p1\:\:text`,
 		},
 		{
 			name: "multi placeholders",
 			in:   "VALUES ($1::text, $2::bigint)",
-			want: `VALUES (:p1\\:\\:text, :p2\\:\\:bigint)`,
+			want: `VALUES (:p1\:\:text, :p2\:\:bigint)`,
 		},
 		{
 			name: "no colons, no placeholders is identity",
 			in:   "SELECT 1",
 			want: "SELECT 1",
+		},
+		{
+			name: "a backslash of the SQL is not the rewrite's business",
+			in:   `SELECT E'\n', 'a\:b'`,
+			want: `SELECT E'\n', 'a\\:b'`,
 		},
 	}
 	for _, tc := range cases {
@@ -231,13 +237,13 @@ func TestSQLAlchemyRowConstructorNameCollision(t *testing.T) {
 }
 
 // TestSQLAlchemyRewriteHeaderVerb pins the second emission site: the verb
-// colon on the `-- name: <fn> :<verb>` line escapes to `\\:<verb>`.
+// colon on the `-- name: <fn> :<verb>` line escapes to `\:<verb>`.
 func TestSQLAlchemyRewriteHeaderVerb(t *testing.T) {
 	cases := map[string]string{
-		":one":      `\\:one`,
-		":many":     `\\:many`,
-		":exec":     `\\:exec`,
-		":execrows": `\\:execrows`,
+		":one":      `\:one`,
+		":many":     `\:many`,
+		":exec":     `\:exec`,
+		":execrows": `\:execrows`,
 	}
 	for in, want := range cases {
 		if got := SQLAlchemyRewriteHeaderVerb(in); got != want {

@@ -20,26 +20,32 @@ const SQLAlchemyConn = "sqlalchemy.ext.asyncio.AsyncConnection"
 var postgresPlaceholderRegexp = regexp.MustCompile(`\B\$(\d+)\b`)
 
 // SQLAlchemyRewriteSQL rewrites a query body for SQLAlchemy's text() binds,
-// mirroring upstream sqlc-gen-python's sqlalchemySQL. ORDER IS LOAD-BEARING:
+// mirroring upstream sqlc-gen-python's sqlalchemySQL. It returns the RUN-TIME
+// text; the emission site encodes it for the Python string
+// (core.PyTripleQuotedText doubles each backslash, so `\:` is written `\\:`).
+// ORDER IS LOAD-BEARING:
 //
-//  1. Escape EVERY colon `:` -> `\\:` over the whole body (two backslash
-//     characters + colon in the emitted Python text, so the runtime SQL string
-//     carries `\:` which SQLAlchemy reads as a literal colon). This is NOT
-//     cast-only — `::` casts become `\\:\\:`, and a non-cast literal colon
-//     (`WHERE label = 'a:b'`) also escapes to `'a\\:b'`.
+//  1. Escape EVERY colon `:` -> `\:` over the whole body (SQLAlchemy reads
+//     `\:` as a literal colon). This is NOT cast-only — `::` casts become
+//     `\:\:`, and a non-cast literal colon (`WHERE label = 'a:b'`) also
+//     escapes to `'a\:b'`.
 //  2. THEN replace `$N` -> `:pN`. Escaping first ensures the inserted `:pN`
 //     bind markers are NOT themselves escaped.
+//
+// A backslash of the SQL itself stays as it is: SQLAlchemy unescapes only a
+// backslash directly before a colon, and step 1 puts its own backslash there.
 func SQLAlchemyRewriteSQL(s string) string {
-	s = strings.ReplaceAll(s, ":", `\\:`)
+	s = strings.ReplaceAll(s, ":", `\:`)
 	return postgresPlaceholderRegexp.ReplaceAllString(s, ":p$1")
 }
 
 // SQLAlchemyRewriteHeaderVerb escapes the verb colon on the `-- name: <fn>
-// :<verb>` header line (`:one` -> `\\:one`), a SEPARATE emission site from the
-// body rewrite. SQLAlchemy parses the whole `text()` string for `:name` binds
-// including the leading comment, so the verb colon must be escaped too.
+// :<verb>` header line (`:one` -> `\:one` at run time), a SEPARATE emission
+// site from the body rewrite. SQLAlchemy parses the whole `text()` string for
+// `:name` binds including the leading comment, so the verb colon must be
+// escaped too.
 func SQLAlchemyRewriteHeaderVerb(verb string) string {
-	return strings.ReplaceAll(verb, ":", `\\:`)
+	return strings.ReplaceAll(verb, ":", `\:`)
 }
 
 // sqlalchemyStreamMarker is the per-query opt-out from the buffered :many

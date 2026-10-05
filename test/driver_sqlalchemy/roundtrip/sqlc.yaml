@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: cd19d8c59cc933f237418152eadf86253d5348ffe2d6d1243b508ae4ee2db629
+      sha256: 53c815beefcc741ffa478c27de6bddb8d60a3da7fce1fb7da372cd1f88acaf57
 sql:
   # Tier-2 live-Postgres round-trip case (GOAL §2/§3 PROOFS). The generated
   # AsyncQuerier is executed against a real sqlalchemy.ext.asyncio.AsyncConnection

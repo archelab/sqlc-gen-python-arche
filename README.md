@@ -76,6 +76,10 @@ runtime-only bugs the static gates miss.
   `options` block fail loudly and name the offending key.
 - A gen-time guard reports struct-to-struct name collisions instead of emitting
   two classes with the same name.
+- Every backslash of a query reaches the database as written, for every driver.
+  The query constant is a Python `"""` string that is not raw, so the generator
+  doubles each backslash and escapes a `"""` in the SQL. Before v0.5.6, Python
+  read `\n`, `\1` or `\'` in the SQL as escapes and ran other SQL.
 
 ### Inherited from the upstream plugin
 
@@ -203,7 +207,9 @@ reason, or on any other query, stops the plugin with an error.
 
 Positional `$N` parameters are rewritten to `:pN` named binds and passed as a
 dict (`{"p1": wid}`); every literal `:` in the SQL is escaped so casts like
-`::integer` survive `sqlalchemy.text()`.
+`::integer` survive `sqlalchemy.text()`. The SQL's own backslashes stay as
+written: `sqlalchemy.text()` unescapes only the backslash directly before a
+colon, and the colon escape puts its own backslash there.
 
 ## The `validate` override
 

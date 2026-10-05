@@ -390,7 +390,7 @@ func (b *IndentStringBuilder) writeQueryFunctionSQL(lvl int, query *core.Query) 
 	if *docstringConfigEmitSQL {
 		b.WriteIndentedLine(lvl, "```sql")
 		for _, line := range core.SplitLines(query.SQL) {
-			b.WriteIndentedLine(lvl, line)
+			b.WriteIndentedLine(lvl, core.PyTripleQuotedText(line))
 		}
 		b.WriteIndentedLine(lvl, "```")
 		b.NewLine()
