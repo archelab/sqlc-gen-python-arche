@@ -320,7 +320,10 @@ func (gen *PythonGenerator) buildQueries(tables []core.Table) ([]core.Query, err
 			gq.Args = values
 		}
 
-		if len(query.Columns) == 1 && query.Columns[0].EmbedTable == nil {
+		// Only a verb that returns rows gets a Ret. sqlc passes the columns of a
+		// SELECT or a RETURNING under :exec too, and a single-column Ret typed
+		// the discarding :exec function by that column (`-> int`, no return).
+		if putOutColumns(query) && len(query.Columns) == 1 && query.Columns[0].EmbedTable == nil {
 			c := query.Columns[0]
 			name := core.ColumnName(c, 0)
 			name = strings.Replace(name, "$", "_", -1)

@@ -67,6 +67,10 @@ VALUES (
 RETURNING file_attachment_id, upload_id, chat_id, extraction_id, user_id, created_at, expires_at
 """
 
+LOCK_FILE_ATTACHMENT: typing.Final[str] = """-- name: LockFileAttachment \\:exec
+SELECT pg_advisory_xact_lock(:p1\\:\\:bigint)
+"""
+
 TOUCH_FILE_ATTACHMENT: typing.Final[str] = """-- name: TouchFileAttachment \\:exec
 UPDATE file_attachment
 SET expires_at = :p1\\:\\:timestamptz
@@ -106,6 +110,9 @@ class AsyncQuerier:
         if row is None:
             return None
         return insert_file_attachment_row(row)
+
+    async def lock_file_attachment(self, *, file_attachment_id: int) -> None:
+        await self._conn.execute(sqlalchemy.text(LOCK_FILE_ATTACHMENT), {"p1": file_attachment_id})
 
     async def touch_file_attachment(self, *, expires_at: datetime.datetime, file_attachment_id: int) -> None:
         await self._conn.execute(sqlalchemy.text(TOUCH_FILE_ATTACHMENT), {"p1": expires_at, "p2": file_attachment_id})
