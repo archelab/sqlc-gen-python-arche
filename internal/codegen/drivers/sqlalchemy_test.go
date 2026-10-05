@@ -236,6 +236,24 @@ func TestSQLAlchemyRowConstructorNameCollision(t *testing.T) {
 	}
 }
 
+// TestSQLAlchemyUnbindablePlaceholderStopsGeneration pins the one SQL shape
+// the rewrite can not keep: a `$N` directly after a backslash (SQLAlchemy reads
+// `\:pN` as an escaped literal, with no error) or after a colon (`\::pN`, no
+// bind). A `$N` after a space, a bracket or a `::` cast after it stays legal.
+func TestSQLAlchemyUnbindablePlaceholderStopsGeneration(t *testing.T) {
+	for _, sql := range []string{`SELECT 'x\$1'::text`, `SELECT (ARRAY[1,2])[1:$1::int]`} {
+		err := sqlalchemyCheckPlaceholders(&core.Query{MethodName: "Q", SQL: sql})
+		if err == nil || !strings.Contains(err.Error(), "query Q") {
+			t.Fatalf("%s: want an error naming query Q, got %v", sql, err)
+		}
+	}
+	for _, sql := range []string{`SELECT $1::text`, `SELECT (ARRAY[1,2])[1: $1::int]`, `WHERE a = ANY($1::int[])`, `SELECT E'\n', 'a:b'`} {
+		if err := sqlalchemyCheckPlaceholders(&core.Query{MethodName: "Q", SQL: sql}); err != nil {
+			t.Fatalf("%s: want no error, got %v", sql, err)
+		}
+	}
+}
+
 // TestSQLAlchemyRewriteHeaderVerb pins the second emission site: the verb
 // colon on the `-- name: <fn> :<verb>` line escapes to `\:<verb>`.
 func TestSQLAlchemyRewriteHeaderVerb(t *testing.T) {

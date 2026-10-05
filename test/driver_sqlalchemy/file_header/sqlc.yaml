@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: 63c6a4144429b4e346d768af767362ff6ce46ae49b4a9eb8122ee9b81228d0e5
+      sha256: 4dc321303865ca8c06a926a89c5c7b09bef1fcf2e4cf9276cb6a5b6e09b596b5
 sql:
   # Proves the F5 file_header primitive (C-#11): file_header set + emit_init_file
   # true means the literal is absolute line 1 of models.py, the query file, AND

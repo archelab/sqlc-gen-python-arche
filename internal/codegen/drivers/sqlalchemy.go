@@ -19,6 +19,13 @@ const SQLAlchemyConn = "sqlalchemy.ext.asyncio.AsyncConnection"
 // digits avoid touching `$N` glued to a word char.
 var postgresPlaceholderRegexp = regexp.MustCompile(`\B\$(\d+)\b`)
 
+// unbindablePlaceholderRegexp matches a `$N` the rewrite would touch that
+// directly follows a backslash or a colon. The rewrite turns it into `\:pN`
+// (SQLAlchemy reads an escaped literal `:pN`, so the SQL's backslash and the
+// bind are both lost, with no error) or `\::pN` (no bind, and Postgres gets
+// the backslash and `::pN`).
+var unbindablePlaceholderRegexp = regexp.MustCompile(`[\\:]\$\d+\b`)
+
 // SQLAlchemyRewriteSQL rewrites a query body for SQLAlchemy's text() binds,
 // mirroring upstream sqlc-gen-python's sqlalchemySQL. It returns the RUN-TIME
 // text; the emission site encodes it for the Python string
@@ -34,6 +41,8 @@ var postgresPlaceholderRegexp = regexp.MustCompile(`\B\$(\d+)\b`)
 //
 // A backslash of the SQL itself stays as it is: SQLAlchemy unescapes only a
 // backslash directly before a colon, and step 1 puts its own backslash there.
+// The one exception, a `$N` directly after a backslash or a colon, stops
+// generation (sqlalchemyCheckPlaceholders).
 func SQLAlchemyRewriteSQL(s string) string {
 	s = strings.ReplaceAll(s, ":", `\:`)
 	return postgresPlaceholderRegexp.ReplaceAllString(s, ":p$1")
@@ -46,6 +55,15 @@ func SQLAlchemyRewriteSQL(s string) string {
 // escaped too.
 func SQLAlchemyRewriteHeaderVerb(verb string) string {
 	return strings.ReplaceAll(verb, ":", `\:`)
+}
+
+// sqlalchemyCheckPlaceholders stops generation for a `$N` that the rewrite can
+// not turn into a working bind (unbindablePlaceholderRegexp).
+func sqlalchemyCheckPlaceholders(query *core.Query) error {
+	if match := unbindablePlaceholderRegexp.FindString(query.SQL); match != "" {
+		return fmt.Errorf("query %s: %q: sqlalchemy.text() can not bind a $N placeholder directly after a backslash or a colon; put a space before the placeholder, and keep $<digits> out of string literals", query.MethodName, match)
+	}
+	return nil
 }
 
 // sqlalchemyStreamMarker is the per-query opt-out from the buffered :many
@@ -108,6 +126,9 @@ func SQLAlchemyBuildPyQueryFunc(query *core.Query, body *builders.IndentStringBu
 		docstringConnType = ""
 	}
 
+	if err := sqlalchemyCheckPlaceholders(query); err != nil {
+		return err
+	}
 	stream, err := sqlalchemyKeepsStream(query)
 	if err != nil {
 		return err

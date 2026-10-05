@@ -211,7 +211,10 @@ Positional `$N` parameters are rewritten to `:pN` named binds and passed as a
 dict (`{"p1": wid}`); every literal `:` in the SQL is escaped so casts like
 `::integer` survive `sqlalchemy.text()`. The SQL's own backslashes stay as
 written: `sqlalchemy.text()` unescapes only the backslash directly before a
-colon, and the colon escape puts its own backslash there.
+colon, and the colon escape puts its own backslash there. A `$N` directly after
+a backslash or a colon (`'\$1'`, `[1:$1]`) can not become a working bind, so it
+stops generation with an error that names the query. Put a space before the
+placeholder.
 
 ## The `validate` override
 
