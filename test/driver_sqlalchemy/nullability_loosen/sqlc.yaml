@@ -3,7 +3,7 @@ plugins:
   - name: python
     wasm:
       url: file://../sqlc-gen-python-arche.wasm
-      sha256: d353702d497591b1b4735e94fe103baf1ad87cfa84da4ce924f9f4c93684e338
+      sha256: f4b7b5bc27cf91ed6c9711f4eeb0b3ea59b9643d472adc0fa5d03f9f662d9bf2
 sql:
   # Proves the NullabilityOverride LOOSEN mechanism (ruling F2, P-04) on the
   # three result shapes whose loosen target is uniquely named: a correlated
