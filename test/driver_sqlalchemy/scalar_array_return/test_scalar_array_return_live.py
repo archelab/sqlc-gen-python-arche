@@ -51,16 +51,14 @@ async def test_scalar_array_one_returns_list(
     case_conn: sqlalchemy.ext.asyncio.AsyncConnection,
 ) -> None:
     # :one scalar array column -> list[str] | None. The value is a real Python
-    # list, NOT a string: assert membership + length so a `str`-typed regression
-    # (which would make `len` count characters and iteration yield single chars)
-    # is caught at runtime.
+    # list, NOT a string: the type check and the exact list catch a `str`-typed
+    # regression (iteration would yield single chars) at runtime.
     await _seed(case_conn, [(1, ["alpha", "beta"]), (2, ["gamma"])])
     querier = queries.AsyncQuerier(case_conn)
 
     tags = await querier.get_entity_tags(entity_id=1)
     assert isinstance(tags, list)
     assert tags == ["alpha", "beta"]
-    assert len(tags) == 2
 
     single = await querier.get_entity_tags(entity_id=2)
     assert single == ["gamma"]
