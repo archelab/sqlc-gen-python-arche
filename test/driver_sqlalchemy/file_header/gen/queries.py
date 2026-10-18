@@ -32,7 +32,7 @@ class AsyncQuerier:
         return get_gadget_row(row)
 
 
-def get_gadget_row(row: sqlalchemy.Row[typing.Any]) -> models.Gadget:
+def get_gadget_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Gadget:
     return models.Gadget(
         gadget_id=row[0],
         label=row[1],

@@ -42,11 +42,11 @@ class AsyncQuerier:
         return get_thing_by_id_row(row)
 
 
-def count_things_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def count_things_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]
 
 
-def get_thing_by_id_row(row: sqlalchemy.Row[typing.Any]) -> models.Thing:
+def get_thing_by_id_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Thing:
     return models.Thing(
         thing_id=row[0],
         label=row[1],

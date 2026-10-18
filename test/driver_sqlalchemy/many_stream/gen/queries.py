@@ -60,11 +60,11 @@ class AsyncQuerier:
             yield list_upload_ids_row(row)
 
 
-def list_all_upload_ids_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def list_all_upload_ids_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]
 
 
-def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:
+def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.FileAttachment:
     return models.FileAttachment(
         file_attachment_id=row[0],
         upload_id=row[1],
@@ -76,5 +76,5 @@ def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Any]) -> models
     )
 
 
-def list_upload_ids_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def list_upload_ids_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]

@@ -48,7 +48,7 @@ class AsyncQuerier:
         return get_book_with_author_row(row)
 
 
-def get_book_with_author_row(row: sqlalchemy.Row[typing.Any]) -> GetBookWithAuthorRow:
+def get_book_with_author_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetBookWithAuthorRow:
     return GetBookWithAuthorRow(
         book_id=row[0],
         author=models.Author(author_id=row[1], settings=_AuthorSettings_adapter.validate_python(row[2])),

@@ -182,7 +182,7 @@ func TestSQLAlchemyRowConstructorIsTheOneRowBuilder(t *testing.T) {
 
 	body := builders.NewIndentStringBuilder(conf.IndentChar, conf.CharsPerIndentLevel)
 	SQLAlchemyBuildRowConstructor(shapes[0].query, body, retType)
-	want := "def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> GetWidgetRow:\n" +
+	want := "def get_widget_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetWidgetRow:\n" +
 		"    return GetWidgetRow(\n" +
 		"        widget_id=row[0],\n" +
 		"        config=_WidgetConfig_adapter.validate_python(row[1]),\n" +
@@ -208,8 +208,8 @@ func TestSQLAlchemyRowConstructorScalar(t *testing.T) {
 		retType core.PyType
 		want    string
 	}{
-		{validated, core.PyType{Type: "WidgetConfig"}, "def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig | None:\n    return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None\n"},
-		{plain, core.PyType{Type: "int"}, "def list_ids_row(row: sqlalchemy.Row[typing.Any]) -> int:\n    return row[0]\n"},
+		{validated, core.PyType{Type: "WidgetConfig"}, "def get_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig | None:\n    return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None\n"},
+		{plain, core.PyType{Type: "int"}, "def list_ids_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:\n    return row[0]\n"},
 	}
 	for _, tc := range cases {
 		body := builders.NewIndentStringBuilder(" ", 4)

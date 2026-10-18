@@ -43,9 +43,9 @@ class AsyncQuerier:
             yield list_entity_tags_row(row)
 
 
-def get_entity_tags_row(row: sqlalchemy.Row[typing.Any]) -> list[str]:
+def get_entity_tags_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> list[str]:
     return row[0]
 
 
-def list_entity_tags_row(row: sqlalchemy.Row[typing.Any]) -> list[str]:
+def list_entity_tags_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> list[str]:
     return row[0]

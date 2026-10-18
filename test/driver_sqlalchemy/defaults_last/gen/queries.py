@@ -36,7 +36,7 @@ class AsyncQuerier:
         return get_item_row(row)
 
 
-def get_item_row(row: sqlalchemy.Row[typing.Any]) -> models.Item:
+def get_item_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Item:
     return models.Item(
         item_id=row[0],
         note=row[1],

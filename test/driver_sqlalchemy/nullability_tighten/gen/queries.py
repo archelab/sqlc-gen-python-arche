@@ -65,7 +65,7 @@ class AsyncQuerier:
             yield lock_source_rows_row(row)
 
 
-def lock_charge_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockChargeRowsRow:
+def lock_charge_rows_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> LockChargeRowsRow:
     return LockChargeRowsRow(
         ledger_charge_id=row[0],
         charge_penalty_value=row[1],
@@ -73,7 +73,7 @@ def lock_charge_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockChargeRowsRow:
     )
 
 
-def lock_source_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockSourceRowsRow:
+def lock_source_rows_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> LockSourceRowsRow:
     return LockSourceRowsRow(
         ledger_charge_id=row[0],
         charge_penalty_value=row[1],

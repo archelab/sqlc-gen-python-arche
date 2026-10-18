@@ -142,10 +142,10 @@ func TestSQLAlchemyManyIsNativeAsyncGenerator(t *testing.T) {
 	if !strings.Contains(out, "            yield list_expired_file_attachments_row(row)\n") {
 		t.Error("struct :many must yield its row constructor")
 	}
-	if !strings.Contains(out, "def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:\n    return models.FileAttachment(\n") {
+	if !strings.Contains(out, "def list_expired_file_attachments_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.FileAttachment:\n    return models.FileAttachment(\n") {
 		t.Error("struct row constructor must build models.X(...)")
 	}
-	if !strings.Contains(out, "def list_upload_ids_row(row: sqlalchemy.Row[typing.Any]) -> str:\n    return row[0]\n") {
+	if !strings.Contains(out, "def list_upload_ids_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:\n    return row[0]\n") {
 		t.Error("scalar row constructor must return row[0]")
 	}
 }

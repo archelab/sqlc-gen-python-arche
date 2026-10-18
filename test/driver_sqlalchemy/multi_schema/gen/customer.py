@@ -40,7 +40,7 @@ class AsyncQuerier:
         return get_customer_order_row(row)
 
 
-def get_customer_order_row(row: sqlalchemy.Row[typing.Any]) -> GetCustomerOrderRow:
+def get_customer_order_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetCustomerOrderRow:
     return GetCustomerOrderRow(
         name=row[0],
         total=row[1],

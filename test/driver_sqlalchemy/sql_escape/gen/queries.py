@@ -164,37 +164,37 @@ class AsyncQuerier:
         return unit_separator_escapes_row(row)
 
 
-def backreference_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def backreference_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]
 
 
-def backslash_before_colon_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def backslash_before_colon_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]
 
 
-def count_by_literal_colon_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def count_by_literal_colon_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]
 
 
-def like_escaped_percent_row(row: sqlalchemy.Row[typing.Any]) -> LikeEscapedPercentRow:
+def like_escaped_percent_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> LikeEscapedPercentRow:
     return LikeEscapedPercentRow(
         escaped_percent_matches_percent=row[0],
         escaped_percent_rejects_other=row[1],
     )
 
 
-def mood_labels_row(row: sqlalchemy.Row[typing.Any]) -> models.EscapeMood:
+def mood_labels_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.EscapeMood:
     return row[0]
 
 
-def newline_escapes_row(row: sqlalchemy.Row[typing.Any]) -> NewlineEscapesRow:
+def newline_escapes_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> NewlineEscapesRow:
     return NewlineEscapesRow(
         e_string=row[0],
         standard_string=row[1],
     )
 
 
-def regex_dot_row(row: sqlalchemy.Row[typing.Any]) -> RegexDotRow:
+def regex_dot_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> RegexDotRow:
     return RegexDotRow(
         escaped_dot_matches_dot=row[0],
         escaped_dot_rejects_other=row[1],
@@ -203,14 +203,14 @@ def regex_dot_row(row: sqlalchemy.Row[typing.Any]) -> RegexDotRow:
     )
 
 
-def triple_quote_row(row: sqlalchemy.Row[typing.Any]) -> TripleQuoteRow:
+def triple_quote_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> TripleQuoteRow:
     return TripleQuoteRow(
         triple_quote=row[0],
         backslash_triple_quote=row[1],
     )
 
 
-def unit_separator_escapes_row(row: sqlalchemy.Row[typing.Any]) -> UnitSeparatorEscapesRow:
+def unit_separator_escapes_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> UnitSeparatorEscapesRow:
     return UnitSeparatorEscapesRow(
         e_string=row[0],
         standard_string=row[1],

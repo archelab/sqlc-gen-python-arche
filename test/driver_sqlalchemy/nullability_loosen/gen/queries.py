@@ -79,7 +79,7 @@ class AsyncQuerier:
         return get_reconcile_candidate_row(row)
 
 
-def get_customer_legal_form_row(row: sqlalchemy.Row[typing.Any]) -> GetCustomerLegalFormRow:
+def get_customer_legal_form_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetCustomerLegalFormRow:
     return GetCustomerLegalFormRow(
         customer_id=row[0],
         full_name=row[1],
@@ -87,7 +87,7 @@ def get_customer_legal_form_row(row: sqlalchemy.Row[typing.Any]) -> GetCustomerL
     )
 
 
-def get_reconcile_candidate_row(row: sqlalchemy.Row[typing.Any]) -> GetReconcileCandidateRow:
+def get_reconcile_candidate_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetReconcileCandidateRow:
     return GetReconcileCandidateRow(
         customer_id=row[0],
         secondary_total_ledger_amount=row[1],

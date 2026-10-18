@@ -33,7 +33,7 @@ class AsyncQuerier:
         return get_used_row(row)
 
 
-def get_used_row(row: sqlalchemy.Row[typing.Any]) -> models.UsedTable:
+def get_used_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.UsedTable:
     return models.UsedTable(
         used_id=row[0],
         label=row[1],

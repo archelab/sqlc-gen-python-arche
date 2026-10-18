@@ -46,7 +46,7 @@ class AsyncQuerier:
         return get_file_attachment_row(row)
 
 
-def get_audit_log_row(row: sqlalchemy.Row[typing.Any]) -> models.AuditLog:
+def get_audit_log_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.AuditLog:
     return models.AuditLog(
         id=row[0],
         table_name=row[1],
@@ -55,7 +55,7 @@ def get_audit_log_row(row: sqlalchemy.Row[typing.Any]) -> models.AuditLog:
     )
 
 
-def get_file_attachment_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:
+def get_file_attachment_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.FileAttachment:
     return models.FileAttachment(
         file_attachment_id=row[0],
         upload_id=row[1],

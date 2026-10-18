@@ -183,7 +183,7 @@ class AsyncQuerier:
 
 
 # one module-level row constructor per row-returning query
-def delete_widgets_returning_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def delete_widgets_returning_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return ...
 ```
 
@@ -194,6 +194,12 @@ list_configs_row(row)`, `[..._row(row) for row in result.all()]`). A caller that
 fetches the row itself, for example through a query that wraps the constant and
 appends a trailing column, calls the same constructor and gets the same value:
 the constructor reads the columns by position from 0.
+
+The constructor takes `sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]`,
+the row type SQLAlchemy 2.1 gives a `text()` result: any number of untyped
+columns. The generated code type-checks against SQLAlchemy 2.1 or later. Under
+2.1, `Row` is variadic, so the `Row[typing.Any]` that earlier versions emitted
+is a row of one column, and a type checker rejects every read after `row[0]`.
 
 A `:many` SELECT buffers by default: `conn.execute` fetches every row in one
 round trip, and the generator yields them from memory. `conn.stream` opens a
@@ -287,17 +293,17 @@ _WidgetPayload_adapter: pydantic.TypeAdapter[WidgetPayload] = pydantic.TypeAdapt
 
 
 # non-null scalar -> fail-loud validate, no NULL guard
-def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def get_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return _WidgetConfig_adapter.validate_python(row[0])
 
 
 # NULLABLE scalar -> NULL guard: a SQL NULL returns None, never raises
-def get_extra_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig | None:
+def get_extra_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig | None:
     return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None
 
 
 # discriminated union member, validated against A | B | C[D]
-def get_payload_row(row: sqlalchemy.Row[typing.Any]) -> WidgetPayload:
+def get_payload_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetPayload:
     return _WidgetPayload_adapter.validate_python(row[0])
 ```
 
@@ -308,7 +314,7 @@ A validated column inside a struct row is validated per field, with the same
 NULL guard for nullable fields:
 
 ```python
-def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
+def get_widget_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Widget:
     return models.Widget(
         widget_id=row[0],
         config=_WidgetConfig_adapter.validate_python(row[1]),

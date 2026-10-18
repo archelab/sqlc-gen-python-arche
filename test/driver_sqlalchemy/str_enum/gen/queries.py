@@ -31,7 +31,7 @@ class AsyncQuerier:
         return get_order_row(row)
 
 
-def get_order_row(row: sqlalchemy.Row[typing.Any]) -> models.Order:
+def get_order_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Order:
     return models.Order(
         order_id=row[0],
         status=row[1],

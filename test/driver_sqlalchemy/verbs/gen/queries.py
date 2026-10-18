@@ -118,11 +118,11 @@ class AsyncQuerier:
         await self._conn.execute(sqlalchemy.text(TOUCH_FILE_ATTACHMENT), {"p1": expires_at, "p2": file_attachment_id})
 
 
-def count_file_attachments_by_extraction_id_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def count_file_attachments_by_extraction_id_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]
 
 
-def get_file_attachment_by_upload_id_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:
+def get_file_attachment_by_upload_id_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.FileAttachment:
     return models.FileAttachment(
         file_attachment_id=row[0],
         upload_id=row[1],
@@ -134,7 +134,7 @@ def get_file_attachment_by_upload_id_row(row: sqlalchemy.Row[typing.Any]) -> mod
     )
 
 
-def insert_file_attachment_row(row: sqlalchemy.Row[typing.Any]) -> models.FileAttachment:
+def insert_file_attachment_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.FileAttachment:
     return models.FileAttachment(
         file_attachment_id=row[0],
         upload_id=row[1],

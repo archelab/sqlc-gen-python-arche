@@ -60,11 +60,11 @@ class AsyncQuerier:
         await self._conn.execute(sqlalchemy.text(INSERT_WIDGET), {"p1": wid, "p2": cfg})
 
 
-def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def get_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return row[0]
 
 
-def get_payload_row(row: sqlalchemy.Row[typing.Any]) -> GetPayloadRow:
+def get_payload_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetPayloadRow:
     return GetPayloadRow(
         widget_id=row[0],
         payload=row[1],

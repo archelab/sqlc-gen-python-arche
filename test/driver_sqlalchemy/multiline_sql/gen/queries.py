@@ -37,7 +37,7 @@ class AsyncQuerier:
         return get_account_row(row)
 
 
-def get_account_row(row: sqlalchemy.Row[typing.Any]) -> models.Account:
+def get_account_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Account:
     return models.Account(
         account_id=row[0],
         label=row[1],

@@ -205,7 +205,7 @@ class AsyncQuerier:
             yield lock_source_rows_row(row)
 
 
-def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Any]) -> models.LedgerEntry:
+def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.LedgerEntry:
     return models.LedgerEntry(
         ledger_entry_id=row[0],
         internal_code=row[1],
@@ -214,7 +214,7 @@ def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Any]) -> models.LedgerEnt
     )
 
 
-def get_customer_row(row: sqlalchemy.Row[typing.Any]) -> models.Customer:
+def get_customer_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Customer:
     return models.Customer(
         customer_id=row[0],
         full_name=row[1],
@@ -223,14 +223,14 @@ def get_customer_row(row: sqlalchemy.Row[typing.Any]) -> models.Customer:
     )
 
 
-def get_order_kind_row(row: sqlalchemy.Row[typing.Any]) -> models.OrderKind:
+def get_order_kind_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.OrderKind:
     return models.OrderKind(
         order_kind_id=row[0],
         label=row[1],
     )
 
 
-def get_reconcile_candidate_row(row: sqlalchemy.Row[typing.Any]) -> GetReconcileCandidateRow:
+def get_reconcile_candidate_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetReconcileCandidateRow:
     return GetReconcileCandidateRow(
         customer_id=row[0],
         secondary_total_ledger_amount=row[1],
@@ -240,7 +240,7 @@ def get_reconcile_candidate_row(row: sqlalchemy.Row[typing.Any]) -> GetReconcile
     )
 
 
-def list_ledger_entries_row(row: sqlalchemy.Row[typing.Any]) -> models.LedgerEntry:
+def list_ledger_entries_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.LedgerEntry:
     return models.LedgerEntry(
         ledger_entry_id=row[0],
         internal_code=row[1],
@@ -249,14 +249,14 @@ def list_ledger_entries_row(row: sqlalchemy.Row[typing.Any]) -> models.LedgerEnt
     )
 
 
-def list_order_kinds_row(row: sqlalchemy.Row[typing.Any]) -> models.OrderKinds:
+def list_order_kinds_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.OrderKinds:
     return models.OrderKinds(
         customer_id=row[0],
         order_kind_id=row[1],
     )
 
 
-def lock_charge_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockChargeRowsRow:
+def lock_charge_rows_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> LockChargeRowsRow:
     return LockChargeRowsRow(
         ledger_charge_id=row[0],
         charge_penalty_value=row[1],
@@ -264,7 +264,7 @@ def lock_charge_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockChargeRowsRow:
     )
 
 
-def lock_source_rows_row(row: sqlalchemy.Row[typing.Any]) -> LockSourceRowsRow:
+def lock_source_rows_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> LockSourceRowsRow:
     return LockSourceRowsRow(
         ledger_charge_id=row[0],
         charge_penalty_value=row[1],

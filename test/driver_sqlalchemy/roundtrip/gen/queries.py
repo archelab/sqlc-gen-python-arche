@@ -227,7 +227,7 @@ class AsyncQuerier:
         await self._conn.execute(sqlalchemy.text(TOUCH_LEDGER), {"p1": note, "p2": ledger_id})
 
 
-def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
+def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Ledger:
     return models.Ledger(
         ledger_id=row[0],
         note=row[1],
@@ -237,11 +237,11 @@ def bump_ledger_amounts_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
     )
 
 
-def count_ledgers_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def count_ledgers_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]
 
 
-def get_charge_amounts_row(row: sqlalchemy.Row[typing.Any]) -> GetChargeAmountsRow:
+def get_charge_amounts_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetChargeAmountsRow:
     return GetChargeAmountsRow(
         charge_id=row[0],
         charge_penalty_value=row[1],
@@ -249,7 +249,7 @@ def get_charge_amounts_row(row: sqlalchemy.Row[typing.Any]) -> GetChargeAmountsR
     )
 
 
-def get_ledger_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
+def get_ledger_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Ledger:
     return models.Ledger(
         ledger_id=row[0],
         note=row[1],
@@ -259,19 +259,19 @@ def get_ledger_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
     )
 
 
-def get_widget_extra_row(row: sqlalchemy.Row[typing.Any]) -> typing.Any:
+def get_widget_extra_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> typing.Any:
     return row[0]
 
 
-def get_widget_kind_row(row: sqlalchemy.Row[typing.Any]) -> models.WidgetKind:
+def get_widget_kind_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.WidgetKind:
     return row[0]
 
 
-def get_widget_meta_row(row: sqlalchemy.Row[typing.Any]) -> WidgetMeta:
+def get_widget_meta_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetMeta:
     return row[0]
 
 
-def insert_ledger_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
+def insert_ledger_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Ledger:
     return models.Ledger(
         ledger_id=row[0],
         note=row[1],
@@ -281,11 +281,11 @@ def insert_ledger_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
     )
 
 
-def list_ledger_notes_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def list_ledger_notes_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]
 
 
-def list_ledgers_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
+def list_ledgers_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Ledger:
     return models.Ledger(
         ledger_id=row[0],
         note=row[1],
@@ -295,5 +295,5 @@ def list_ledgers_row(row: sqlalchemy.Row[typing.Any]) -> models.Ledger:
     )
 
 
-def select_colon_literal_row(row: sqlalchemy.Row[typing.Any]) -> str:
+def select_colon_literal_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> str:
     return row[0]

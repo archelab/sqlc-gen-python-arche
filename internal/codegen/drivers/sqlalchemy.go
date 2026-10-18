@@ -14,6 +14,13 @@ import (
 // the single runtime dependency the driver leaks onto the public surface.
 const SQLAlchemyConn = "sqlalchemy.ext.asyncio.AsyncConnection"
 
+// sqlalchemyRow is the parameter type of every row constructor: the row a
+// `text()` statement yields. SQLAlchemy 2.1 makes Row variadic
+// (`Generic[Unpack[_Ts]]`) and types such a row `Row[Unpack[TupleAny]]`, any
+// number of untyped columns. `Row[typing.Any]` there is a row of ONE column,
+// so every `row[1]` and later read is out of range for a type checker.
+const sqlalchemyRow = "sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]"
+
 // postgresPlaceholderRegexp matches a `$N` positional placeholder, mirroring
 // upstream sqlc-gen-python's sqlalchemySQL. `\B` before `$` and `\b` after the
 // digits avoid touching `$N` glued to a word char.
@@ -303,7 +310,7 @@ func SQLAlchemyCheckRowConstructorNames(queries []core.Query, conf *core.Config)
 }
 
 // SQLAlchemyBuildRowConstructor writes the module-level
-// `def <func>_row(row: sqlalchemy.Row[typing.Any]) -> T:`, the one place that
+// `def <func>_row(row: sqlalchemyRow) -> T:`, the one place that
 // builds a result row: either a bare `return row[0]` for a scalar result or a
 // `return models.X(field=row[N], ...)` for a struct, by running row index
 // (handling sqlc.embed expansion via sqlalchemyRowKwargs). The indexes are
@@ -317,7 +324,7 @@ func SQLAlchemyBuildRowConstructor(query *core.Query, body *builders.IndentStrin
 	if !query.Ret.IsStruct() && query.Ret.Typ.DoValidate() && query.Ret.Typ.IsNullable {
 		annotation += " | None"
 	}
-	body.WriteLine(fmt.Sprintf("def %s(row: sqlalchemy.Row[typing.Any]) -> %s:", SQLAlchemyRowConstructorName(query), annotation))
+	body.WriteLine(fmt.Sprintf("def %s(row: %s) -> %s:", SQLAlchemyRowConstructorName(query), sqlalchemyRow, annotation))
 	if !query.Ret.IsStruct() {
 		// The validate decision reads the FULL result type (query.Ret.Typ carries
 		// the override + Validate); `retType` here is the stripped header type

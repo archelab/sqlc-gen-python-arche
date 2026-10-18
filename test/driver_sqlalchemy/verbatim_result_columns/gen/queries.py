@@ -56,14 +56,14 @@ class AsyncQuerier:
         return get_report_totals_row(row)
 
 
-def get_report_row_row(row: sqlalchemy.Row[typing.Any]) -> models.Report:
+def get_report_row_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Report:
     return models.Report(
         report_id=row[0],
         dados=row[1],
     )
 
 
-def get_report_totals_row(row: sqlalchemy.Row[typing.Any]) -> GetReportTotalsRow:
+def get_report_totals_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetReportTotalsRow:
     return GetReportTotalsRow(
         total_creditos=row[0],
         total_documentos=row[1],

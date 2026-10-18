@@ -116,23 +116,23 @@ class AsyncQuerier:
             yield list_configs_row(row)
 
 
-def delete_widgets_returning_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def delete_widgets_returning_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return _WidgetConfig_adapter.validate_python(row[0])
 
 
-def get_config_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def get_config_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return _WidgetConfig_adapter.validate_python(row[0])
 
 
-def get_extra_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig | None:
+def get_extra_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig | None:
     return _WidgetConfig_adapter.validate_python(row[0]) if row[0] is not None else None
 
 
-def get_payload_row(row: sqlalchemy.Row[typing.Any]) -> WidgetPayload:
+def get_payload_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetPayload:
     return _WidgetPayload_adapter.validate_python(row[0])
 
 
-def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
+def get_widget_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Widget:
     return models.Widget(
         widget_id=row[0],
         config=_WidgetConfig_adapter.validate_python(row[1]),
@@ -141,5 +141,5 @@ def get_widget_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
     )
 
 
-def list_configs_row(row: sqlalchemy.Row[typing.Any]) -> WidgetConfig:
+def list_configs_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> WidgetConfig:
     return _WidgetConfig_adapter.validate_python(row[0])

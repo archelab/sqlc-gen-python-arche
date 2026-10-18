@@ -73,19 +73,19 @@ class AsyncQuerier:
             yield lock_entities_for_update_row(row)
 
 
-def get_entity_by_tags_row(row: sqlalchemy.Row[typing.Any]) -> GetEntityByTagsRow:
+def get_entity_by_tags_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> GetEntityByTagsRow:
     return GetEntityByTagsRow(
         entity_id=row[0],
         tag_ids=row[1],
     )
 
 
-def list_entity_links_row(row: sqlalchemy.Row[typing.Any]) -> ListEntityLinksRow:
+def list_entity_links_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> ListEntityLinksRow:
     return ListEntityLinksRow(
         entity_id=row[0],
         entity_id_2=row[1],
     )
 
 
-def lock_entities_for_update_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def lock_entities_for_update_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]

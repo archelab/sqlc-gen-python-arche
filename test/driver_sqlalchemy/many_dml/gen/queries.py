@@ -76,11 +76,11 @@ class AsyncQuerier:
         return [update_widgets_by_status_row(row) for row in result.all()]
 
 
-def delete_widget_ids_row(row: sqlalchemy.Row[typing.Any]) -> int:
+def delete_widget_ids_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> int:
     return row[0]
 
 
-def delete_widgets_via_c_t_e_row(row: sqlalchemy.Row[typing.Any]) -> DeleteWidgetsViaCTERow:
+def delete_widgets_via_c_t_e_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> DeleteWidgetsViaCTERow:
     return DeleteWidgetsViaCTERow(
         widget_id=row[0],
         name=row[1],
@@ -88,7 +88,7 @@ def delete_widgets_via_c_t_e_row(row: sqlalchemy.Row[typing.Any]) -> DeleteWidge
     )
 
 
-def insert_widget_returning_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
+def insert_widget_returning_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Widget:
     return models.Widget(
         widget_id=row[0],
         name=row[1],
@@ -96,7 +96,7 @@ def insert_widget_returning_row(row: sqlalchemy.Row[typing.Any]) -> models.Widge
     )
 
 
-def update_widgets_by_status_row(row: sqlalchemy.Row[typing.Any]) -> models.Widget:
+def update_widgets_by_status_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Widget:
     return models.Widget(
         widget_id=row[0],
         name=row[1],

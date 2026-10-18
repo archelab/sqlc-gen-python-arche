@@ -42,7 +42,7 @@ class AsyncQuerier:
             yield list_courses_row(row)
 
 
-def get_course_row(row: sqlalchemy.Row[typing.Any]) -> models.Course:
+def get_course_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Course:
     return models.Course(
         id=row[0],
         class_=row[1],
@@ -51,7 +51,7 @@ def get_course_row(row: sqlalchemy.Row[typing.Any]) -> models.Course:
     )
 
 
-def list_courses_row(row: sqlalchemy.Row[typing.Any]) -> models.Course:
+def list_courses_row(row: sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]) -> models.Course:
     return models.Course(
         id=row[0],
         class_=row[1],
