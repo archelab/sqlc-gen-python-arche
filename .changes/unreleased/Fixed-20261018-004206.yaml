@@ -1,0 +1,6 @@
+kind: Fixed
+body: 'v0.5.8: the SQLAlchemy row constructor takes `sqlalchemy.Row[typing.Unpack[tuple[typing.Any, ...]]]`, the row type SQLAlchemy 2.1 gives a `text()` result. SQLAlchemy 2.1 makes `Row` variadic, so the `Row[typing.Any]` of earlier versions is a row of one column, and a type checker rejected every read after `row[0]`. The generated code type-checks against SQLAlchemy 2.1 or later.'
+time: 2026-10-18T00:42:06.000000Z
+custom:
+    Author: pedro-pscunha
+    PR: "30"
